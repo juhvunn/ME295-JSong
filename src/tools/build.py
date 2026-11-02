@@ -31,3 +31,26 @@ def build_netlist(template_name: str, params: dict[str, float]) -> str:
             raise ValueError(f"{name}: expected a finite number, got {value!r}")
         formatted[name] = f"{value:.6g}"
     return Template(text).substitute(formatted)
+
+
+def diode_clipper_parameters() -> dict[str, float]:
+    """Return the shared component and protocol parameters for the clipper."""
+    import yaml
+
+    from src.config import REPO_ROOT, load_config
+
+    config = load_config()
+    with (REPO_ROOT / config["protocol"]).open(encoding="utf-8") as protocol_file:
+        protocol = yaml.safe_load(protocol_file)
+    ac, transient = protocol["ac"], protocol["transient"]
+    return {
+        "R1": 4.7e3,
+        "C1": 10e-9,
+        "VIN_AMP": transient["amplitude_v"],
+        "FREQ": transient["freq_hz"],
+        "AC_PPD": ac["points_per_decade"],
+        "AC_FSTART": ac["f_start_hz"],
+        "AC_FSTOP": ac["f_stop_hz"],
+        "TSTEP": transient["t_step_s"],
+        "TSTOP": transient["t_stop_s"],
+    }

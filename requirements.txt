@@ -1,5 +1,6 @@
 numpy
 matplotlib
+schemdraw
 pyyaml
 pydantic>=2
 python-dotenv

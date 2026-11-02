@@ -8,7 +8,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import REPO_ROOT, load_config  # noqa: E402
-from src.tools.build import build_netlist  # noqa: E402
+from src.tools.build import build_netlist, diode_clipper_parameters  # noqa: E402
 from src.tools.simulate import read_wrdata, simulate  # noqa: E402
 
 
@@ -16,14 +16,9 @@ def main() -> int:
     cfg = load_config()
     with open(REPO_ROOT / cfg["protocol"], encoding="utf-8") as f:
         proto = yaml.safe_load(f)
-    ac, tr = proto["ac"], proto["transient"]
+    tr = proto["transient"]
 
-    netlist = build_netlist("diode_clipper.cir", {
-        "R1": 4.7e3, "C1": 10e-9,
-        "VIN_AMP": tr["amplitude_v"], "FREQ": tr["freq_hz"],
-        "AC_PPD": ac["points_per_decade"], "AC_FSTART": ac["f_start_hz"], "AC_FSTOP": ac["f_stop_hz"],
-        "TSTEP": tr["t_step_s"], "TSTOP": tr["t_stop_s"],
-    })
+    netlist = build_netlist("diode_clipper.cir", diode_clipper_parameters())
     res = simulate(netlist)
     print(f"run {res.run_id}: returncode={res.returncode} timed_out={res.timed_out}")
     print(f"  netlist: {res.netlist_path}\n  log:     {res.log_path}")
