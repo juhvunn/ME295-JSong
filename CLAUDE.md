@@ -37,7 +37,7 @@ reach more specs than a fixed-topology parameter search and a single LLM?
 - Verify the Checker on known circuits before trusting results: non-inverting op-amp gain (1+Rf/Rg), RC low-pass -3 dB at 1/(2*pi*R*C), pure sine THD ~ 0.
 
 ## Environment
-Windows, VS Code, conda env [ENV_NAME — TODO: no conda found on this machine], ngspice 41, Python [VERSION — TODO: no Python found on this machine]. Repo: local only (D:\Users\jsong3\ME295-JSong, no remote).
+Windows, VS Code, conda env ME295, ngspice 41, Python 3.12.15. Repo: local only (D:\Users\jsong3\ME295-JSong, no remote).
 Note: `logs/` holds ngspice run logs; `runs/<id>/` holds netlists and simulation output (gitignored).
 
 ## Workflow for you (Claude Code)
