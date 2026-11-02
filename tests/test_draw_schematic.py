@@ -18,3 +18,4 @@ def test_schematic_components_match_rendered_template(tmp_path):
         (component.name, component.nodes, component.value) for component in drawn_components
     ]
     assert (tmp_path / "diode_clipper.png").is_file()
+    assert (tmp_path / "diode_clipper.png").stat().st_size > 0

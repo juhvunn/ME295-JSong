@@ -9,7 +9,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import matplotlib.pyplot as plt
 import schemdraw
 import schemdraw.elements as elm
 
@@ -126,9 +125,7 @@ def draw_schematic(output_path: str | Path | None = None) -> list[Component]:
         REPO_ROOT / "results" / "schematics" / "diode_clipper.png"
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    figure = drawing.draw(show=False)
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(figure)
+    drawing.save(str(output_path), transparent=False, dpi=150)
     return components
 
 
