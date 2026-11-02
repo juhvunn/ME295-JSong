@@ -1,0 +1,22 @@
+# Approved block catalog (v1). The Library Searcher may only pick blocks listed here.
+# Parameter ranges are initial placeholders; revise as the design space is pinned down.
+version: 1
+blocks:
+  diode_clipper:
+    description: Series resistor into antiparallel 1N4148 diodes to ground (symmetric hard clipping)
+    template: diode_clipper.cir
+    params:
+      R1: {unit: ohm, min: 1.0e+3, max: 100.0e+3}
+      C1: {unit: F, min: 1.0e-12, max: 100.0e-9}
+  opamp_gain:
+    description: Non-inverting op-amp gain stage, gain = 1 + Rf/Rg
+    template: null   # TODO
+    params:
+      Rf: {unit: ohm, min: 1.0e+3, max: 1.0e+6}
+      Rg: {unit: ohm, min: 100.0, max: 100.0e+3}
+  rc_tone:
+    description: First-order RC low-pass tone control, fc = 1/(2*pi*R*C)
+    template: rc_lowpass.cir
+    params:
+      R: {unit: ohm, min: 100.0, max: 1.0e+6}
+      C: {unit: F, min: 100.0e-12, max: 1.0e-6}

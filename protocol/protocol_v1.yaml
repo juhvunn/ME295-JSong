@@ -1,0 +1,13 @@
+# Simulation/measurement protocol v1. All methods (agents and baselines) share this.
+version: 1
+ac:
+  points_per_decade: 100
+  f_start_hz: 10
+  f_stop_hz: 100000
+transient:
+  signal: sine
+  freq_hz: 1000
+  amplitude_v: 1.0
+  t_step_s: 1.0e-6
+  t_stop_s: 10.0e-3
+  settle_s: 5.0e-3   # discard before steady-state analysis (THD)

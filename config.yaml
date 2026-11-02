@@ -1,0 +1,18 @@
+# Project configuration. The model ID is read ONLY from here (never hardcoded).
+llm:
+  model_id: "MODEL_ID_PLACEHOLDER"   # TODO: pin an exact model ID before running agents
+  max_retries: 3                     # bounded retries on Pydantic validation failure
+
+ngspice:
+  # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.
+  # Can be a full path, e.g. "C:/Spice64/bin/ngspice_con.exe".
+  executable: "ngspice_con"
+  timeout_s: 30
+
+paths:
+  runs_dir: "runs"
+  logs_dir: "logs"
+
+protocol: "protocol/protocol_v1.yaml"
+targets: "targets/targets_v1.yaml"
+blocks: "blocks/block_library.yaml"
