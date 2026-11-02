@@ -1,6 +1,7 @@
 .env
 runs/
 logs/*.log
+results/plots/*.png
 *.raw
 __pycache__/
 .venv/
