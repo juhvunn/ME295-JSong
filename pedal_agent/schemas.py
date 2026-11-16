@@ -47,6 +47,46 @@ class Candidate(BaseModel):
     rationale: str
 
 
+# ---------- Tone Analyst LLM output ----------
+class ToneDraft(BaseModel):
+    """What the LLM returns; code wraps it in a TargetSpec (test signal, approval fields)."""
+    targets: list[MetricTarget]
+    rationale: str                      # why these targets fit the goal (Design choices panel)
+
+
+# ---------- Planner LLM output ----------
+# Structured outputs cannot express free-form dicts, so the LLM returns params
+# as name/value pairs; to_candidate() converts them into BlockInstance.
+PlannerAction = Literal["initial_chain", "adjust_params", "swap_block", "add_block", "remove_block"]
+
+class ParamValue(BaseModel):
+    name: str
+    value: float | str
+
+class ProposedBlock(BaseModel):
+    block_id: str
+    params: list[ParamValue] = Field(default_factory=list)
+
+class PlannerDecision(BaseModel):
+    action: PlannerAction
+    chain: list[ProposedBlock]          # the full proposed chain, pickup -> amp
+    rationale: str
+
+    def to_candidate(self) -> Candidate:
+        return Candidate(chain=[BlockInstance(block_id=b.block_id, params={p.name: p.value for p in b.params})
+                                for b in self.chain], rationale=self.rationale)
+
+
+# ---------- LLM usage (cost accounting) ----------
+class LLMUsage(BaseModel):
+    node: Literal["tone_analyst", "planner"]
+    model_id: str
+    effort: str
+    input_tokens: int
+    output_tokens: int
+    attempts: int = 1                   # 2 after a retry; tokens are summed over attempts
+
+
 # ---------- Checker output ----------
 class MetricResult(BaseModel):
     name: MetricName
@@ -88,6 +128,9 @@ class Step(BaseModel):
     why: str                            # rationale / feedback text
     candidate: Optional[Candidate] = None
     report: Optional[CheckReport] = None
+    validation_errors: list[str] = Field(default_factory=list)   # candidate rejected, no sim used
+    warnings: list[str] = Field(default_factory=list)            # e.g. E-series snapping, chain order
+    llm: Optional[LLMUsage] = None
     at: datetime = Field(default_factory=now)
 
 
@@ -109,7 +152,21 @@ class RunRecord(BaseModel):
     best_step: Optional[int] = None     # Step.n with the lowest score
     sims_used: int = 0
     sim_budget: int = 12
+    price_in_per_mtok: float = 0.0      # USD per million tokens, copied from config.yaml at run start
+    price_out_per_mtok: float = 0.0
     audio: Optional[dict] = None        # {"clip": ..., "dry": path, "processed": path}
+
+    @property
+    def input_tokens(self) -> int:
+        return sum(s.llm.input_tokens for s in self.steps if s.llm)
+
+    @property
+    def output_tokens(self) -> int:
+        return sum(s.llm.output_tokens for s in self.steps if s.llm)
+
+    @property
+    def cost_usd(self) -> float:
+        return (self.input_tokens * self.price_in_per_mtok + self.output_tokens * self.price_out_per_mtok) / 1e6
 
     @property
     def topology_changes(self) -> int:

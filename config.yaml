@@ -1,15 +1,22 @@
 # Project configuration. The model ID is read ONLY from here (never hardcoded).
 llm:
   model_id: "claude-opus-5-5"       # pinned; the only place the model ID is set
-  max_retries: 3                     # bounded retries on Pydantic validation failure
+  max_retries: 2                     # attempts per LLM call: 1 retry with the validation error
   max_tokens: 16000
   effort: "medium"                   # low/medium/high/xhigh/max (output_config.effort)
+  price_in_per_mtok: 4.0             # USD per million input tokens (claude-opus-5-5)
+  price_out_per_mtok: 20.0           # USD per million output tokens
+
+run:
+  sim_budget: 12                     # max simulations per run
+  stall_checks: 3                    # stop if the best score has not improved in this many checks
+  max_planner_calls_per_sim: 2       # safety net: planner calls <= this * sim_budget
 
 ngspice:
   # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.
   # Can be a full path, e.g. "C:/Spice64/bin/ngspice_con.exe".
   executable: "ngspice_con"
-  timeout_s: 30
+  timeout_s: 120                      # hard-clipping blocks (TS-808 drive 0.9) take ~30 s
 
 paths:
   runs_dir: "runs"
