@@ -62,12 +62,3 @@ def diode_clipper_parameters() -> dict[str, float]:
     """Return the shared component and protocol parameters for the clipper."""
     return {"R1": 4.7e3, "C1": 10e-9, **protocol_parameters()}
 
-
-def build_block_netlist(template_name: str, values: dict[str, float]) -> str:
-    """Fill a block template with component values plus the protocol placeholders it uses."""
-    path = TEMPLATES_DIR / template_name
-    if path.parent != TEMPLATES_DIR or not path.is_file():
-        raise ValueError(f"unknown template {template_name!r}")
-    required = set(PLACEHOLDER_RE.findall(path.read_text(encoding="utf-8")))
-    shared = {k: v for k, v in protocol_parameters().items() if k in required}
-    return build_netlist(template_name, {**shared, **values})

@@ -19,6 +19,8 @@ if it is not on PATH (on Windows use the console build, `ngspice_con.exe`).
 From the repo root:
 
 ```
+python -m pedal_agent run --goal "warm mid-forward overdrive" --llm fake   # agent, no API cost
+python -m pedal_agent run --goal "..."      # real Claude (ANTHROPIC_API_KEY in .env)
 pytest                                # all tests (Checker tests take ~30 s)
 python -m tests.smoke_block           # DC/AC/THD smoke test of every pedal block
 python -m examples.make_example_run   # rebuild runs/example-jazz-christmas.json

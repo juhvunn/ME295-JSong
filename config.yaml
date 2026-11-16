@@ -26,4 +26,3 @@ paths:
 
 protocol: "protocol/protocol_v1.yaml"
 targets: "targets/targets_v1.yaml"
-blocks: "blocks/block_library.yaml"

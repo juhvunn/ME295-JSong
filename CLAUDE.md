@@ -1,5 +1,5 @@
 # Project: Multi-Agent Guitar Amp Circuit Design with SPICE Feedback
-Course: AM/ME/CE 295 (Caltech, Fall 2026). Solo project. Status: early implementation (as of Nov 1, 2026).
+Course: AM/ME/CE 295 (Caltech, Fall 2026). Solo project. Status: Phase 2 of docs/DASHBOARD_SPEC.md done (agent on the command line), as of Nov 16, 2026.
 
 ## Goal
 Multi-agent system that turns natural-language tone goals (e.g. "warm crunch") into measurable specs,
@@ -12,12 +12,17 @@ Under equal simulation budgets, does an agent loop that can change topology (not
 reach more specs than a fixed-topology parameter search and a single LLM?
 
 ## Architecture
-- LLM agents: Planner (coordinates, revises), Tone Analyst (tone -> schema-validated spec), Library Searcher (picks blocks from approved catalog only)
-- Deterministic code (NO LLM): validate_circuit, build_netlist, simulate (sandboxed ngspice), evaluate (Checker), memory
-- Blocks v1: diode clipper, op-amp gain stage, RC tone control
-- Metrics: gain, AC frequency response, THD + harmonic ratios (steady-state transient)
-- Tools (plain Python): search_blocks, validate_circuit, build_netlist, simulate, evaluate, get_history, export_design
-- Session memory: JSONL, one record per candidate {id, parent_id, blocks, values, protocol_version, status, metrics, violations, rationale, change_type: "topology"|"values"}
+- LangGraph loop (pedal_agent/graph.py): tone_analyst (LLM) -> approve_spec (human interrupt) -> planner (LLM)
+  -> validate -> check -> router -> planner ... or -> feedback (human interrupt) -> planner | accept
+- LLM agents: Tone Analyst (tone -> TargetSpec via ToneDraft), Planner (PlannerDecision: action + full chain).
+  No separate Library Searcher yet: the Planner gets a compact catalog generated from blocks/*/block.yaml.
+- Deterministic code (NO LLM): validate.py, build.py (render), checker.py (simulate + metrics + score), router.py
+- Blocks: od_ts808, dist_distplus, fuzz_ff_si; chains of 1-3 blocks between a pickup model and a 1 MOhm load
+- Metrics (schemas.MetricName): gain_1k_db, thd_pct, ac_peak_hz, ac_peak_db, even_odd, out_pk_v
+- Run memory: one RunRecord per run in runs/<run_id>.json (schemas.py), rewritten after every step; each Step holds
+  candidate, CheckReport, validation errors/warnings, LLM token usage, and action (initial_chain | adjust_params |
+  swap_block | add_block | remove_block = topology vs values). Pauses are checkpointed in runs/checkpoints.sqlite.
+- CLI: python -m pedal_agent run --goal "..." [--auto-approve] [--no-feedback] [--mode agent|baseline_fixed_topology] [--llm real|fake]
 
 ## Baselines (all use the same evaluate() and protocol, equal simulation budget)
 1. Single LLM, one candidate
@@ -27,10 +32,11 @@ reach more specs than a fixed-topology parameter search and a single LLM?
 ## Hard rules
 - Model ID is read ONLY from config.yaml (pinned). Never hardcode.
 - Never commit API keys. Use .env (gitignored). Never print keys.
-- LLM-generated text is never executed directly. Netlists come only from trusted templates in build_netlist.
+- LLM-generated text is never executed directly. Netlists come only from trusted templates (blocks/*/template.cir.j2
+  rendered by build.py from validated numbers/choices).
 - Filter dangerous SPICE directives (.shell, .system, .include, shell inside .control). Always use a timeout.
 - All LLM outputs are validated with Pydantic; on failure, return the error and retry (bounded).
-- Checker feedback to the Planner is structured numbers (target, got, error), not prose.
+- Checker feedback to the Planner is structured numbers (metric, target range, measured, status, score), not prose.
 - Prefer deterministic checkers over LLM checkers.
 - Every Planner revision logs whether it changed topology or only values.
 - Any consequential action (export, git push, deleting files) requires my approval.
@@ -39,7 +45,7 @@ reach more specs than a fixed-topology parameter search and a single LLM?
 ## Environment
 Windows, VS Code, conda env ME295, ngspice 41 (inside the env: Library/bin/ngspice_con.exe), Python 3.12.15.
 Repo: D:\Users\jsong3\ME295-JSong, remote origin = https://github.com/juhvunn/ME295-JSong (main).
-Note: `logs/` holds ngspice run logs; `runs/<id>/` holds netlists and simulation output (gitignored).
+Note: `logs/` holds ngspice run logs; `runs/sims/<id>/` holds netlists and simulation output (gitignored).
 
 ## Workflow for you (Claude Code)
 - Work in small steps; run tests after each change and show me the results.
@@ -49,9 +55,11 @@ Note: `logs/` holds ngspice run logs; `runs/<id>/` holds netlists and simulation
 ## Layout
 Plan and phases: docs/DASHBOARD_SPEC.md. Package: pedal_agent/ (run with `python -m ...` from the repo root).
 - pedal_agent/{schemas,build,harness,checker}.py: RunRecord contract, Jinja2 block rendering, pickup harness, Checker
+- pedal_agent/{graph,llm,prompts,validate,router,cli}.py: agent loop, Claude/fake LLM clients, prompts, Validate, Router, CLI
 - pedal_agent/tools/simulate.py: the only way to run ngspice (directive filter, timeout); models are pasted in, never .include
 - pedal_agent/reference/: known circuits (RC low-pass, diode clipper) for verifying the Checker
-- pedal_agent/agents/, memory.py, baselines/, config.py; tools/{validate,evaluate}.py (pre-Phase-2 loop)
-- blocks/<id>/{block.yaml,template.cir.j2}: pedal blocks; blocks/block_library.yaml: old toy catalog (pre-Phase-2 loop)
+- pedal_agent/tools/evaluate.py (f_minus3db), baselines/ (Phase 3), config.py
+- blocks/<id>/{block.yaml,template.cir.j2}: pedal blocks (typical_metrics generated by scripts/fill_typical_metrics.py)
+- docs/phase2_design.md: Phase 2 design
 - models/smoke_models.lib: PLACEHOLDER models, not real parts
 - examples/, tests/ (tests/smoke_block.py: `python -m tests.smoke_block`), runs/ (gitignored except runs/example-*.json)
