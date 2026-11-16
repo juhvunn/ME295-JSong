@@ -75,7 +75,7 @@ def main() -> int:
         lines += ["", f"* {d['part']}", f"* {d['document']}", f"* fit range {d['fit_range']}; "
                   f"max |error| {np.max(np.abs(err)):.1f} mV; below {lo:.3g} A is extrapolated",
                   f".model {name} D({params} Tnom={temp_c:g})"]
-    OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    OUT.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")  # LF, as stored in git
     print(f"\nwrote {OUT}")
     return 0
 

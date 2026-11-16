@@ -221,6 +221,12 @@ XU inp inn vcc vee out NJM4558_VENDOR_NAME
 
 ## How they plug in
 
+- `models/manifest.yaml` gives each library file a status (`validated` or `placeholder`;
+  unlisted files count as `unregistered`). Every CheckReport records the files used
+  (path, SHA-256 of the LF-normalised text, status), any unvalidated choices, and a
+  `placeholder_or_unvalidated` flag; the RunRecord JSON carries the run-wide flag and file list.
+  **Add every new model file to the manifest.**
+
 - The Checker reads one model file: `models/smoke_models.lib`, or the file named by the `MODELS`
   environment variable. The plan is a new `models/real_models.lib` containing all models above
   (plus wrappers), then a switch of the default.

@@ -54,7 +54,7 @@ def main(ids: list[str]) -> int:
         metrics = measure(block_id)
         new = SECTION_RE.sub(lambda _: section(metrics, signal["amp_v"], signal["f0_hz"],
                                                MODELS.replace("\\", "/").split("/")[-1]), text, count=1)
-        path.write_text(new, encoding="utf-8")
+        path.write_text(new, encoding="utf-8", newline="\n")  # LF, as stored in git
         print(f"{block_id}:")
         for key, m in metrics.items():
             print(f"  {key:22s} {m}")

@@ -8,7 +8,7 @@ except through the actions listed in DASHBOARD_SPEC.md.
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 def now() -> datetime:
@@ -101,6 +101,12 @@ class Plots(BaseModel):
     freq_hz: list[float]
     mag_db: list[float]
 
+class ModelFile(BaseModel):
+    """A part-model library file used by a simulation (see models/manifest.yaml)."""
+    path: str                           # relative to the repo root when inside it
+    sha256: str                         # of the text with LF line endings
+    status: Literal["validated", "placeholder", "unregistered"]
+
 class CheckReport(BaseModel):
     metrics: dict[str, float]
     results: list[MetricResult]
@@ -109,6 +115,11 @@ class CheckReport(BaseModel):
     errors: list[str] = Field(default_factory=list)   # validate / ngspice failures
     netlist_sha256: Optional[str] = None
     plots: Optional[Plots] = None
+    model_files: list[ModelFile] = Field(default_factory=list)
+    unvalidated_choices: list[str] = Field(default_factory=list)   # e.g. "dist_distplus.D_clip=ge"
+    # True if any model file is not "validated" or any unvalidated choice was used;
+    # None for reports written before this was recorded
+    placeholder_or_unvalidated: Optional[bool] = None
 
     @property
     def n_pass(self) -> int:
@@ -156,6 +167,25 @@ class RunRecord(BaseModel):
     price_in_per_mtok: float = 0.0      # USD per million tokens, copied from config.yaml at run start
     price_out_per_mtok: float = 0.0
     audio: Optional[dict] = None        # {"clip": ..., "dry": path, "processed": path}
+
+    @computed_field
+    @property
+    def placeholder_or_unvalidated(self) -> Optional[bool]:
+        """True if any check in this run used a placeholder/unregistered model file or an
+        unvalidated choice. Such runs must not be used for reported results."""
+        flags = [s.report.placeholder_or_unvalidated for s in self.steps
+                 if s.report and s.report.placeholder_or_unvalidated is not None]
+        return any(flags) if flags else None
+
+    @computed_field
+    @property
+    def model_files(self) -> list[ModelFile]:
+        """Distinct model files (path, SHA-256, status) used by the checks in this run."""
+        seen = {}
+        for s in self.steps:
+            for f in (s.report.model_files if s.report else []):
+                seen[(f.path, f.sha256)] = f
+        return list(seen.values())
 
     @property
     def input_tokens(self) -> int:

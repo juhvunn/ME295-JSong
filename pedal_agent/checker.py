@@ -5,13 +5,24 @@ import numpy as np
 from pedal_agent.build import render, load_block
 from pedal_agent.config import REPO_ROOT
 from pedal_agent.harness import netlist
+from pedal_agent.provenance import describe, flagged, unvalidated_choices
 from pedal_agent.schemas import Candidate, CheckReport, MetricResult, Plots, TargetSpec
 from pedal_agent.tools.simulate import simulate as run_ngspice
 
 MODELS = os.environ.get("MODELS", str(REPO_ROOT / "models" / "smoke_models.lib"))
 
+def model_paths() -> list[Path]:
+    """Model library files pasted into every netlist (recorded in each CheckReport)."""
+    return [Path(MODELS)]
+
 def models_text():
-    return Path(MODELS).read_text(encoding="utf-8")
+    return "\n".join(p.read_text(encoding="utf-8") for p in model_paths())
+
+def provenance(cand: Candidate) -> dict:
+    files = [describe(p) for p in model_paths()]
+    unval = unvalidated_choices(cand)
+    return {"model_files": files, "unvalidated_choices": unval,
+            "placeholder_or_unvalidated": flagged(files, unval)}
 
 def _harmonics(t, v, f0, n=10):
     v = v - v.mean(); N = len(t)
@@ -39,10 +50,11 @@ def simulate(cand: Candidate, f0=1000.0, amp=0.3):
 
 def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
     f0, amp = spec.test_signal["f0_hz"], spec.test_signal["amp_v"]
+    prov = provenance(cand)
     probes, out, sha, r = simulate(cand, f0, amp)
     if not all(k in out for k in ("op", "ac", "tran")):
         return CheckReport(metrics={}, results=[], score=float("inf"), dc_ok=False,
-                           errors=[f"ngspice failed (returncode={r.returncode}, timed_out={r.timed_out}); see {r.log_path}"], netlist_sha256=sha)
+                           errors=[f"ngspice failed (returncode={r.returncode}, timed_out={r.timed_out}); see {r.log_path}"], netlist_sha256=sha, **prov)
     # DC sanity
     dc = np.atleast_2d(out["op"])[0, 1::2]
     errors = [f"DC {label}={v:.2f} V outside {expect}"
@@ -71,4 +83,4 @@ def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
     plots = Plots(t_s=tr[keep, 0][::4].tolist(), v_in=tr[keep, 1][::4].tolist(), v_out=tr[keep, 3][::4].tolist(),
                   freq_hz=ac[::2, 0].tolist(), mag_db=ac[::2, 1].tolist())
     return CheckReport(metrics=m, results=results, score=score, dc_ok=not errors,
-                       errors=errors, netlist_sha256=sha, plots=plots)
+                       errors=errors, netlist_sha256=sha, plots=plots, **prov)

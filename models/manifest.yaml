@@ -1,0 +1,9 @@
+# Status of each model library file. The Checker records the files it used (with SHA-256)
+# in every CheckReport and flags results that involve placeholder or unregistered files.
+#   validated:   every model in the file was checked against datasheet data (models/README.md)
+#   placeholder: generic models for syntax / DC-bias checks only; not for reported results
+# Files not listed here are treated as "unregistered" (flagged like placeholders).
+files:
+  smoke_models.lib: placeholder
+  opamps.lib: validated
+  diodes_fitted.lib: validated

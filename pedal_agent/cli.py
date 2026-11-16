@@ -70,6 +70,9 @@ def print_summary(run: RunRecord, path, out) -> None:
     print(f"\nSimulations {run.sims_used}/{run.sim_budget}, topology changes {run.topology_changes}, "
           f"tokens in/out {run.input_tokens}/{run.output_tokens}, cost ${run.cost_usd:.4f} "
           f"({run.model_id}, effort {run.effort})", file=out)
+    if run.placeholder_or_unvalidated:
+        print("WARNING: placeholder/unregistered model files or unvalidated choices were used "
+              "(see model_files in the run file): not for reported results.", file=out)
     print(f"Run file: {path}", file=out)
 
 
