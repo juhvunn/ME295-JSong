@@ -26,3 +26,10 @@ paths:
   logs_dir: "logs"
 
 protocol: "protocol/protocol_v1.yaml"
+
+models:
+  set: real                          # real | smoke (smoke = placeholder models, kept for reference)
+  sets:
+    real: [models/opamps.lib, models/diodes_fitted.lib, models/bjts_fitted.lib]
+    smoke: [models/smoke_models.lib]
+  unvalidated_extra: models/unvalidated.lib   # added to a set only when a candidate uses an unvalidated choice

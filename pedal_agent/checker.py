@@ -1,25 +1,44 @@
 """Deterministic Checker: simulate a candidate chain (1-3 blocks), compute metrics, judge vs targets."""
-import hashlib, os
+import hashlib, os, re
 from pathlib import Path
 import numpy as np
 from pedal_agent.build import render, load_block
-from pedal_agent.config import REPO_ROOT
+from pedal_agent.config import REPO_ROOT, load_config
 from pedal_agent.harness import netlist
 from pedal_agent.provenance import describe, flagged, unvalidated_choices
 from pedal_agent.schemas import Candidate, CheckReport, MetricResult, Plots, TargetSpec
 from pedal_agent.tools.simulate import simulate as run_ngspice
 
-MODELS = os.environ.get("MODELS", str(REPO_ROOT / "models" / "smoke_models.lib"))
+# Overrides (for scripts/tests): MODELS = one model file for everything (also the MODELS env var);
+# MODEL_SET = a set name from config.yaml models.sets. Default: config.yaml models.set.
+MODELS = os.environ.get("MODELS")
+MODEL_SET = None
 
-def model_paths() -> list[Path]:
-    """Model library files pasted into every netlist (recorded in each CheckReport)."""
-    return [Path(MODELS)]
+def _defined_names(paths):
+    names = set()
+    for p in paths:
+        names |= {m.lower() for m in re.findall(r"(?im)^\.(?:model|subckt)\s+(\S+)", p.read_text(encoding="utf-8"))}
+    return names
 
-def models_text():
-    return "\n".join(p.read_text(encoding="utf-8") for p in model_paths())
+def model_paths(cand: Candidate | None = None) -> list[Path]:
+    """Model library files pasted into the netlist (each recorded in the CheckReport).
+    The unvalidated-extra file is added only when the candidate uses an unvalidated choice
+    and the set does not already define its models."""
+    if MODELS:
+        return [Path(MODELS)]
+    cfg = load_config()["models"]
+    paths = [REPO_ROOT / p for p in cfg["sets"][MODEL_SET or cfg["set"]]]
+    if cand is not None and unvalidated_choices(cand):
+        extra = REPO_ROOT / cfg["unvalidated_extra"]
+        if not _defined_names([extra]) <= _defined_names(paths):
+            paths.append(extra)
+    return paths
+
+def models_text(cand: Candidate | None = None):
+    return "\n".join(p.read_text(encoding="utf-8") for p in model_paths(cand))
 
 def provenance(cand: Candidate) -> dict:
-    files = [describe(p) for p in model_paths()]
+    files = [describe(p) for p in model_paths(cand)]
     unval = unvalidated_choices(cand)
     return {"model_files": files, "unvalidated_choices": unval,
             "placeholder_or_unvalidated": flagged(files, unval)}
@@ -42,7 +61,7 @@ def simulate(cand: Candidate, f0=1000.0, amp=0.3):
     ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(v for _, v, _ in probes) or 'v(out)'}",
                       "ac dec 50 20 20k", "wrdata ac.txt vdb(out)",
                       "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"])
-    net = netlist(blocks, models_text(), amp, f0, ctrl)
+    net = netlist(blocks, models_text(cand), amp, f0, ctrl)
     sha = hashlib.sha256(net.encode()).hexdigest()
     r = run_ngspice(net)  # sandboxed: directive filter, timeout, runs/<id>/ + logs/<id>.log
     out = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran") if (r.run_dir / f"{f}.txt").exists()}

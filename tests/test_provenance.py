@@ -42,12 +42,29 @@ def test_unvalidated_choices_and_flag():
     assert flagged([ok], ["dist_distplus.D_clip=ge"]) is True
 
 
+REAL = ["models/opamps.lib", "models/diodes_fitted.lib", "models/bjts_fitted.lib"]
+
+
 def test_check_report_records_model_files():
+    rep = checker.check(cand("od_ts808"), SPEC)                 # default set: real (config.yaml)
+    assert [f.path for f in rep.model_files] == REAL
+    assert [f.sha256 for f in rep.model_files] == [text_sha256(REPO_ROOT / p) for p in REAL]
+    assert {f.status for f in rep.model_files} == {"validated"}
+    assert rep.placeholder_or_unvalidated is False and rep.unvalidated_choices == []
+
+
+def test_smoke_set_is_flagged(monkeypatch):
+    monkeypatch.setattr(checker, "MODEL_SET", "smoke")
     rep = checker.check(cand("od_ts808"), SPEC)
-    assert [f.path for f in rep.model_files] == ["models/smoke_models.lib"]
-    assert rep.model_files[0].sha256 == text_sha256(REPO_ROOT / "models" / "smoke_models.lib")
-    assert rep.model_files[0].status == "placeholder"
-    assert rep.placeholder_or_unvalidated is True and rep.unvalidated_choices == []
+    assert [(f.path, f.status) for f in rep.model_files] == [("models/smoke_models.lib", "placeholder")]
+    assert rep.placeholder_or_unvalidated is True
+
+
+def test_unvalidated_choice_adds_placeholder_file_and_flag():
+    rep = checker.check(cand("dist_distplus", D_clip="ge"), SPEC)
+    assert [f.path for f in rep.model_files] == REAL + ["models/unvalidated.lib"]
+    assert rep.model_files[-1].status == "placeholder"
+    assert rep.unvalidated_choices == ["dist_distplus.D_clip=ge"] and rep.placeholder_or_unvalidated is True
 
 
 def test_unregistered_file_is_flagged_and_hash_follows_content(tmp_path, monkeypatch):
@@ -67,11 +84,11 @@ def test_run_record_json_carries_flag_and_files(tmp_path):
           "--runs-dir", str(tmp_path)], out=(out := io.StringIO()))
     path = next(tmp_path.glob("*.json"))
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert data["placeholder_or_unvalidated"] is True
-    assert [f["path"] for f in data["model_files"]] == ["models/smoke_models.lib"]
-    assert "WARNING: placeholder" in out.getvalue()
+    assert data["placeholder_or_unvalidated"] is False
+    assert [f["path"] for f in data["model_files"]] == REAL
+    assert "WARNING: placeholder" not in out.getvalue()
     run = RunRecord.model_validate_json(path.read_text(encoding="utf-8"))   # computed fields round-trip
-    assert run.placeholder_or_unvalidated is True
+    assert run.placeholder_or_unvalidated is False
 
 
 def test_old_records_without_provenance_still_load():

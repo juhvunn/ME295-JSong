@@ -12,7 +12,7 @@ import re
 import sys
 
 from pedal_agent.build import BLOCKS_DIR, load_block
-from pedal_agent.checker import MODELS, check
+from pedal_agent.checker import check, model_paths
 from pedal_agent.schemas import BlockInstance, Candidate, TargetSpec
 
 SECTION_RE = re.compile(r"^typical_metrics:.*\n(?:[ \t]+.*\n)*", re.M)  # header + indented lines
@@ -29,7 +29,13 @@ def measure(block_id: str) -> dict[str, dict]:
     out = {}
     for overrides in variants(meta):
         key = ",".join(f"{k}={v}" for k, v in overrides.items()) or "default"
-        rep = check(Candidate(chain=[BlockInstance(block_id=block_id, params=overrides)], rationale=""), spec)
+        # a choice's `recommended` params (hint, as in the smoke test) are applied and named in the key
+        rec = {k: v for c, val in overrides.items()
+               for k, v in meta["params"][c].get("recommended", {}).get(val, {}).items()}
+        if rec:
+            key += " (recommended " + " ".join(f"{k}={v}" for k, v in rec.items()) + ")"
+        rep = check(Candidate(chain=[BlockInstance(block_id=block_id, params={**overrides, **rec})],
+                              rationale=""), spec)
         if rep.errors:
             raise RuntimeError(f"{block_id} {key}: {rep.errors}")
         out[key] = {k: float(f"{v:.3g}") for k, v in rep.metrics.items()}
@@ -52,8 +58,8 @@ def main(ids: list[str]) -> int:
         if not SECTION_RE.search(text):
             raise RuntimeError(f"{path}: no typical_metrics section")
         metrics = measure(block_id)
-        new = SECTION_RE.sub(lambda _: section(metrics, signal["amp_v"], signal["f0_hz"],
-                                               MODELS.replace("\\", "/").split("/")[-1]), text, count=1)
+        models = "+".join(p.name for p in model_paths())
+        new = SECTION_RE.sub(lambda _: section(metrics, signal["amp_v"], signal["f0_hz"], models), text, count=1)
         path.write_text(new, encoding="utf-8", newline="\n")  # LF, as stored in git
         print(f"{block_id}:")
         for key, m in metrics.items():

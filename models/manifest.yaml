@@ -8,3 +8,4 @@ files:
   opamps.lib: validated
   diodes_fitted.lib: validated
   bjts_fitted.lib: validated
+  unvalidated.lib: placeholder

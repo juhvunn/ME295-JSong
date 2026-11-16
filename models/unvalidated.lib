@@ -1,0 +1,8 @@
+* =====================================================================
+* UNVALIDATED PLACEHOLDER models, used only for choices marked validated: false
+* (added by the Checker only when a candidate uses such a choice; such results
+* are flagged placeholder_or_unvalidated and must not be reported).
+* =====================================================================
+
+* DGE: placeholder for the 1N34A (stand-in for the MXR's 1N270); no datasheet I-V data (models/README.md)
+.model DGE     D(Is=2e-7 N=1.3 Rs=10 Cjo=1p)     ; germanium-like, ~0.3 V at 1 mA

@@ -6,8 +6,8 @@
 2. Sensitivity: runs both blocks with D_clip=led using LED variants whose extrapolated voltage
    at 1 uA spans the range found when fitting different parts of the datasheet curve.
 
-Model set: models/opamps.lib + models/diodes_fitted.lib, with the remaining parts (transistors,
-DGE) taken from the placeholder models/smoke_models.lib until models step B replaces them.
+Model set: the "real" set from config.yaml (op-amps, fitted diodes, fitted transistors), always,
+whatever the configured default; the LED line is substituted for the sensitivity variants.
 
 Usage: python -m scripts.diode_study
 """
@@ -29,27 +29,24 @@ from pedal_agent.tools.simulate import simulate
 from scripts.fit_diodes import fit, vt
 
 MODELS = REPO_ROOT / "models"
-REPLACED_SUBCKTS = ("JRC4558_HALF", "LM741")
-REPLACED_MODELS = ("D1N914", "DLED_RED")
 # where the clipping diodes sit in each block template: (node a, node b) of the antiparallel pair
 CLIP_NODES = {"od_ts808": ("x1.m1", "x1.o1"), "dist_distplus": ("x1.c", "0")}
 
 
-def remaining_placeholders() -> str:
-    """smoke_models.lib without the parts that now have real models."""
-    text = (MODELS / "smoke_models.lib").read_text(encoding="utf-8")
-    for name in REPLACED_SUBCKTS:
-        text = re.sub(rf"(?ims)^\.subckt {name}\b.*?^\.ends\b[^\n]*\n", "", text)
-    for name in REPLACED_MODELS:
-        text = re.sub(rf"(?im)^\.model {name}\b[^\n]*\n", "", text)
-    return text
+def real_set_text() -> str:
+    """The "real" model set from config.yaml, independent of the configured default."""
+    old, checker.MODEL_SET = checker.MODEL_SET, "real"
+    try:
+        return checker.models_text()
+    finally:
+        checker.MODEL_SET = old
 
 
 def model_set(led_line: str | None = None) -> str:
-    diodes = (MODELS / "diodes_fitted.lib").read_text(encoding="utf-8")
+    text = real_set_text()
     if led_line:
-        diodes = re.sub(r"(?im)^\.model DLED_RED\b[^\n]*$", led_line, diodes)
-    return "\n".join([(MODELS / "opamps.lib").read_text(encoding="utf-8"), diodes, remaining_placeholders()])
+        text = re.sub(r"(?im)^\.model DLED_RED\b[^\n]*$", led_line, text)
+    return text
 
 
 def diode_params(lib: str, name: str) -> dict:

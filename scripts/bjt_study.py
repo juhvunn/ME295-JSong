@@ -9,9 +9,10 @@
    fuzz_ff_si (both Q_model choices): DC bias V(b1), V(c1), V(c2), DC checks, gain_1k_db, thd_pct,
    even_odd, out_pk_v. od_ts808 (2N4401): DC checks and buffer emitter voltages, plus metrics.
 3. 2N3904 cross-check: small-signal hfe (VCE = 10 V) of the nominal and hfe_min models vs Fig. 11.
+4. Bias vs R5 with the 2N3904 (hfe_min / nominal / hfe_max): V(c2), DC check, even_odd.
 
-Model set: models/opamps.lib + diodes_fitted.lib + bjts_fitted.lib (variant substituted) + what is
-left of smoke_models.lib (only the unvalidated DGE).
+Model set: the "real" set from config.yaml (op-amps, fitted diodes, fitted transistors), always,
+whatever the configured default; the transistor line is substituted for the variants.
 
 Usage: python -m scripts.bjt_study
 """
@@ -31,25 +32,22 @@ from pedal_agent.tools.simulate import simulate
 from scripts.fit_bjts import fit_all, load, model_line, scale_hfe, small_signal_hfe, with_nf
 
 MODELS = REPO_ROOT / "models"
-REPLACED_SUBCKTS = ("JRC4558_HALF", "LM741")
-REPLACED_MODELS = ("D1N914", "DLED_RED", "Q2N3904", "Q2N4401", "QBC549C")
 
 
-def remaining_placeholders() -> str:
-    text = (MODELS / "smoke_models.lib").read_text(encoding="utf-8")
-    for name in REPLACED_SUBCKTS:
-        text = re.sub(rf"(?ims)^\.subckt {name}\b.*?^\.ends\b[^\n]*\n", "", text)
-    for name in REPLACED_MODELS:
-        text = re.sub(rf"(?im)^\.model {name}\b[^\n]*\n", "", text)
-    return text
+def real_set_text() -> str:
+    """The "real" model set from config.yaml, independent of the configured default."""
+    old, checker.MODEL_SET = checker.MODEL_SET, "real"
+    try:
+        return checker.models_text()
+    finally:
+        checker.MODEL_SET = old
 
 
 def model_set(bjt_override: dict[str, str] | None = None) -> str:
-    bjts = (MODELS / "bjts_fitted.lib").read_text(encoding="utf-8")
+    text = real_set_text()
     for name, line in (bjt_override or {}).items():
-        bjts = re.sub(rf"(?im)^\.model {name} NPN\b[^\n]*$", line, bjts)
-    return "\n".join([(MODELS / "opamps.lib").read_text(encoding="utf-8"),
-                      (MODELS / "diodes_fitted.lib").read_text(encoding="utf-8"), bjts, remaining_placeholders()])
+        text = re.sub(rf"(?im)^\.model {name} NPN\b[^\n]*$", line, text)
+    return text
 
 
 def variants(name, p, t):
@@ -145,6 +143,17 @@ def main() -> int:
     for i, h in t["hfe_crosscheck"]["points"]:
         print(f"    {i * 1e3:5.2g} mA  Fig.11 {h:6.1f}  nominal {small_signal_hfe(i, 10.0, vs['nominal']):6.1f}  "
               f"hfe_min {small_signal_hfe(i, 10.0, vs['hfe_min']):6.1f}")
+
+    print("\n4. Bias vs R5 with the 2N3904: V(c2) / DC check / even_odd")
+    for r5 in (4.7e3, 5.6e3, 6.8e3, 8.2e3):
+        cells = []
+        for label in ("hfe_min", "nominal", "hfe_max"):
+            vlib = model_set({"Q2N3904": model_line("Q2N3904", vs[label])})
+            params = {"Q_model": "Q2N3904", "R5": r5}
+            v = op_values("fuzz_ff_si", params, vlib, ("c2",))["c2"]
+            rep = metrics("fuzz_ff_si", params, vlib)
+            cells.append(f"{label} {v:.2f} V / {'ok' if rep.dc_ok else 'FAIL'} / {rep.metrics['even_odd']:.2f}")
+        print(f"    R5 = {r5 / 1e3:.1f}k: " + " | ".join(cells))
     return 0
 
 

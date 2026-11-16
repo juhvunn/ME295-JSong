@@ -133,14 +133,15 @@ gives very different low-current behaviour:
 
 ### Operating currents in the pedals
 
-From `python -m scripts.diode_study`: default settings, 1 kHz, 300 mV pickup EMF. This uses our
-op-amp and fitted diode models, with the transistors still placeholders until step B. The current
-is computed from the simulated diode voltage with the fitted diode equation.
+From `python -m scripts.diode_study`: default settings, 1 kHz, 300 mV pickup EMF, the real model
+set (op-amps, fitted diodes, fitted transistors; rerun 2026-11-16 after the switch-over, previously
+with placeholder transistors: TS-808 si 40.5 µA, led 31.7 µA / 18 % below 1 µA). The current is
+computed from the simulated diode voltage with the fitted diode equation.
 
 | Block, D_clip | Peak current | Time <1 µA | 1–100 µA | 0.1–1 mA | >1 mA |
 |---|---|---|---|---|---|
-| od_ts808, si | 40.5 µA | 5 % | 95 % | 0 % | 0 % |
-| od_ts808, led | 31.7 µA | 18 % | 82 % | 0 % | 0 % |
+| od_ts808, si | 40.1 µA | 5 % | 95 % | 0 % | 0 % |
+| od_ts808, led | 31.3 µA | 19 % | 81 % | 0 % | 0 % |
 | dist_distplus, si | 201 µA | 4 % | 13 % | 83 % | 0 % |
 | dist_distplus, led | 105.5 µA | 15 % | 31 % | 54 % | 0 % |
 
@@ -151,14 +152,15 @@ extrapolation.
 
 ### LED sensitivity (low and high ends of the extrapolation range)
 
-`D_clip=led`, default settings; same model set as above.
+`D_clip=led`, default settings; same model set as above (rerun with the real set: the TS-808 rows
+changed slightly through the fitted 2N4401 buffers; the spreads, and the conclusion, are unchanged).
 
 | Block | Metric | Low (0.962 V at 1 µA) | Mid (1.230 V) | Used (1.307 V) | Spread low→used |
 |---|---|---|---|---|---|
-| od_ts808 | gain_1k_db | 13.85 | 13.85 | 13.85 | 0 % |
-| | thd_pct | 10.13 | 10.70 | 10.89 | +7.5 % |
-| | out_pk_v | 0.508 | 0.562 | 0.574 | **+13 %** |
-| | even_odd | 0.0146 | 0.0150 | 0.0151 | +3 % |
+| od_ts808 | gain_1k_db | 13.57 | 13.57 | 13.57 | 0 % |
+| | thd_pct | 10.12 | 10.69 | 10.88 | +7.5 % |
+| | out_pk_v | 0.497 | 0.549 | 0.562 | **+13 %** |
+| | even_odd | 0.0330 | 0.0341 | 0.0341 | +3 % |
 | dist_distplus | gain_1k_db | 5.879 | 5.879 | 5.879 | 0 % |
 | | thd_pct | 33.77 | 33.78 | 33.89 | +0.4 % |
 | | out_pk_v | 0.144 | 0.153 | 0.154 | +7 % |
@@ -205,13 +207,14 @@ Central site terms forbid copying without consent; Diodes Inc. refused automated
 Gummel-Poon models are fitted to the datasheets (decision B2). An optional uncommitted cross-check
 with hand-downloaded vendor models (B1) may follow.
 
-**Scope.** Simulated operating currents with these models (default settings,
-`python -m scripts.bjt_study`):
+**Scope.** Simulated operating currents with these models (default settings, i.e. fuzz with the
+default `Q_model = QBC549C`, R5 = 8.2k; `python -m scripts.bjt_study`). Before the default changed
+to QBC549C, the 2N3904 at R5 = 8.2k (which fails its DC check) gave Q1 228 µA, Q2 827 µA, cut off 36 %.
 
 | Transistor | No signal | 300 mV, 1 kHz input |
 |---|---|---|
-| fuzz_ff_si Q1 | 228 µA | 226–268 µA |
-| fuzz_ff_si Q2 | 827 µA | cut off (<10 µA) 36 % of the cycle, otherwise up to 943 µA |
+| fuzz_ff_si Q1 | 234 µA | 226–267 µA |
+| fuzz_ff_si Q2 | 643 µA | cut off (<10 µA) 40 % of the cycle, otherwise up to 941 µA |
 | od_ts808 buffers (2N4401) | 261 µA | 216–306 µA |
 
 Nothing runs above 1 mA. Priority range for the fit: 10 µA–1 mA (below the data: extrapolated).
@@ -363,13 +366,15 @@ XU inp inn vcc vee out NJM4558_VENDOR_NAME
   `placeholder_or_unvalidated` flag; the RunRecord JSON carries the run-wide flag and file list.
   **Add every new model file to the manifest.**
 
-- The Checker reads one model file: `models/smoke_models.lib`, or the file named by the `MODELS`
-  environment variable. The plan is a new `models/real_models.lib` containing all models above
-  (plus wrappers), then a switch of the default.
-- After the switch:
-  1. `python -m tests.smoke_block`: DC checks for every block and choice
-  2. `python -m pytest -q tests/test_checker.py`: some thresholds may need re-checking
-     against the real models
-  3. `python -m scripts.fill_typical_metrics`: re-measure `typical_metrics`
-  4. Update the fake-run script targets if the TS-808 numbers moved
-     (`pedal_agent/llm.py`, `default_fake_script`)
+- **Model sets** (`config.yaml` → `models`): `set: real` is the default since 2026-11-16
+  (`opamps.lib`, `diodes_fitted.lib`, `bjts_fitted.lib`, each recorded separately for provenance).
+  `set: smoke` (`smoke_models.lib`, placeholders) is kept for reference and before/after comparisons
+  (`python -m scripts.compare_models`). The `MODELS` environment variable overrides both with one file.
+- `models/unvalidated.lib` (placeholder `DGE`) is added only when a candidate uses an unvalidated
+  choice (`D_clip=ge`); such results are flagged.
+- Recommended settings (`recommended:` in a choice param, e.g. `fuzz_ff_si` Q2N3904 → R5 = 5.6k) are
+  **hints only**: shown in the Planner's catalog and applied by `tests/smoke_block.py` and
+  `scripts/fill_typical_metrics.py` (named in the `typical_metrics` key). Build never applies them.
+- After a model change: `python -m tests.smoke_block`, `python -m pytest`,
+  `python -m scripts.fill_typical_metrics`, the studies (`scripts/diode_study.py`,
+  `scripts/bjt_study.py`) and `scripts/compare_models.py`; update the tables in this file.

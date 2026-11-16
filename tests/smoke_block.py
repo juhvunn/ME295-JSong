@@ -1,12 +1,13 @@
 """Smoke test for any library block.
 Usage: python -m tests.smoke_block <block_id> [<block_id> ...]
 Runs DC checks, AC response and 1 kHz THD for every D_clip / Q_model choice.
-Uses placeholder models unless the MODELS env var points to real ones."""
+Uses the model set from config.yaml (models.set), or the MODELS env var if set."""
 import sys
 import numpy as np
 from pedal_agent.build import BLOCKS_DIR, render, load_block
 from pedal_agent.checker import models_text
 from pedal_agent.harness import netlist
+from pedal_agent.schemas import BlockInstance, Candidate
 from pedal_agent.tools.simulate import simulate as run_ngspice
 
 F0 = 1000.0
@@ -21,7 +22,8 @@ ac dec 50 20 20k
 wrdata ac.txt vdb(out)
 tran 5u 60m 40m
 wrdata tran.txt v(out)"""
-    net = netlist([(render(block_id, overrides), meta["subckt"])], models_text(), amp, F0, ctrl)
+    cand = Candidate(chain=[BlockInstance(block_id=block_id, params=overrides)], rationale="")
+    net = netlist([(render(block_id, overrides), meta["subckt"])], models_text(cand), amp, F0, ctrl)
     r = run_ngspice(net)
     res = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran")
            if (r.run_dir / f"{f}.txt").exists()}
@@ -54,6 +56,8 @@ def run_block(block_id):
     print(f"\n=== {block_id} ===")
     for var in variants:
         ov = {choice: var} if choice else {}
+        if choice:   # smoke-test setting: apply the block's recommended params for this choice (hint only)
+            ov.update(meta["params"][choice].get("recommended", {}).get(var, {}))
         for amp in AMPS:
             r, res = simulate(block_id, ov, amp, nodes)
             if not all(k in res for k in ("op", "ac", "tran")):
@@ -66,7 +70,9 @@ def run_block(block_id):
             ok_all &= not bad
             m = metrics(res)
             dcs = " ".join(f"{n}={v:.2f}" for n, v in dc.items())
-            print(f"  {choice}={var!s:8s} in={amp*1e3:3.0f}mV | DC {dcs} {'OK' if not bad else 'FAIL ' + str(bad)}"
+            extra = " ".join(f"{k}={v}" for k, v in ov.items() if k != choice)
+            print(f"  {choice}={var!s:8s}{' (' + extra + ', recommended)' if extra else ''} in={amp*1e3:3.0f}mV"
+                  f" | DC {dcs} {'OK' if not bad else 'FAIL ' + str(bad)}"
                   f" | 1k {m['gain_1k_db']:5.1f} dB, peak {m['ac_peak_db']:5.1f} dB @ {m['ac_peak_hz']:5.0f} Hz"
                   f" | out {m['out_pk_v']:.2f} V, THD {m['thd_pct']:5.1f}%, even/odd {m['even_odd']:.2f}")
     return ok_all

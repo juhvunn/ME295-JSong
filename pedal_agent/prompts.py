@@ -57,6 +57,9 @@ def catalog(include_typical: bool) -> list[dict]:
                 params[name] = f"knob 0-1 ({p['taper']}), default {p['default']}"
             elif p["type"] == "choice":
                 params[name] = f"choice {allowed_choices(p, allow)}, default {p['default']}"
+                if p.get("recommended"):   # hint only: the Planner must set these params itself
+                    params[name] += "; recommended settings when choosing (set them yourself): " + ", ".join(
+                        f"{c} -> " + " ".join(f"{k}={v}" for k, v in rec.items()) for c, rec in p["recommended"].items())
             else:
                 params[name] = f"part {p['min']}-{p['max']} ({p.get('series', 'any')}), default {p['value']}"
             if p.get("note"):
