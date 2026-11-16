@@ -7,3 +7,4 @@ files:
   smoke_models.lib: placeholder
   opamps.lib: validated
   diodes_fitted.lib: validated
+  bjts_fitted.lib: validated

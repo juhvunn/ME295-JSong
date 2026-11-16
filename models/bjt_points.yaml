@@ -1,0 +1,109 @@
+# Datasheet data for the transistor fits (scripts/fit_bjts.py -> models/bjts_fitted.lib).
+#
+# Curves were digitized from the PDF vector paths (PyMuPDF get_drawings), mapping each axis
+# piecewise through its labelled grid lines (as for the diodes). Currents in A, voltages in V.
+# PDFs are not committed (copyright); the SHA-256 identifies the file read (downloaded 2026-11-16).
+#
+# hfe_shape:  typical NORMALIZED DC current gain vs Ic (shape only)
+# hfe_spec:   datasheet min/max at the spec current; nominal level = geometric mean (decision (a))
+# hfe_table_min: other table minima (checked by the tests)
+# vbe:        typical VBE vs Ic; `fit` = IS and NF fitted over fit_range; `anchor` = IS from one point, NF given
+temperature_c: 25
+vaf_assumed: 100     # V, not supported by the datasheets (stated default; ro = VAF/Ic >> 33 kOhm load)
+
+transistors:
+  Q2N3904:
+    part: "2N3904 NPN"
+    document: "onsemi, 2N3903, 2N3904 General Purpose Transistors, publication 2N3903/D, Rev. 9 (August 2021)"
+    url: "https://www.onsemi.com/pdf/datasheet/2n3903-d.pdf"
+    sha256: "df43e201f0132961f5de633043ac601bbed13edff161574f99ec05a10f57b8cd"
+    hfe_shape:
+      ref: "Fig. 15 'DC Current Gain', p.6, 25 C curve, VCE = 1.0 V (typical static characteristics)"
+      vce: 1.0
+      fit_range: [1.0e-4, 0.1]
+      points: [[1.015e-4, 0.4372], [2.0e-4, 0.537], [5.0e-4, 0.672], [1.0e-3, 0.767], [2.0e-3, 0.862], [5.0e-3, 0.977],
+               [1.0e-2, 0.994], [2.0e-2, 0.844], [5.0e-2, 0.486], [0.1, 0.273]]
+    hfe_spec: {I: 1.0e-2, vce: 1.0, min: 100, max: 300, ref: "p.2 table, hFE (IC = 10 mA, VCE = 1.0 V)"}
+    hfe_table_min: [[1.0e-4, 40], [1.0e-3, 70], [1.0e-2, 100], [5.0e-2, 60], [0.1, 30]]
+    vbe:
+      ref: "Fig. 17 'ON Voltages', p.6, VBE @ VCE = 1.0 V, 25 C (curve starts at 1 mA)"
+      vce: 1.0
+      mode: anchor           # level only: the curve's slope over 1-10 mA (NF ~0.97) is not resolvable on this coarse linear axis
+      anchor: [1.0e-3, 0.6517]
+      points: [[1.0e-3, 0.6517], [2.0e-3, 0.6610], [5.0e-3, 0.6840], [1.0e-2, 0.7092]]
+      check_points: [[2.0e-2, 0.7370], [5.0e-2, 0.7914], [0.1, 0.8650]]
+      lowest_current: 1.0e-3
+    nf:
+      value: 1.15
+      method: >-
+        NF*Vt = hie*Ic/hfe from Fig. 13 (hie) and Fig. 11 (hfe), p.5 ('h PARAMETERS', VCE = 10 V, f = 1 kHz;
+        single curves, not labelled 'typical'); estimates 1.164, 1.200, 1.204, 1.117, 1.094, 1.137 at
+        0.11, 0.2, 0.5, 1, 2, 5 mA; median 1.15. Supports the VBE slope down to 0.11 mA.
+    hfe_crosscheck:
+      ref: "Fig. 11 'Current Gain' (small-signal hfe), p.5, VCE = 10 V, f = 1 kHz"
+      points: [[1.0e-4, 71.9], [2.0e-4, 85.1], [5.0e-4, 105.3], [1.0e-3, 121.4], [2.0e-3, 136.0], [5.0e-3, 151.2]]
+    caps: {cje: 3.8e-12, cjc: 1.9e-12, ref: "Fig. 3 'Capacitance', p.4, typical, read by eye: Cibo at 0.5 V, Cobo at 5 V"}
+    ft: {value: 3.0e+8, ic: 1.0e-2, vce: 20, kind: "minimum (no typical given)", ref: "p.2 table, fT"}
+
+  Q2N4401:
+    part: "2N4401 NPN"
+    document: "onsemi, 2N4401 General Purpose Transistors, publication 2N4401/D, Rev. 4 (February 2010)"
+    url: "https://www.onsemi.com/pdf/datasheet/2n4401-d.pdf"
+    sha256: "28a71f862d76c9bc79ec5240ceb05be7c6f90ad4a0e47fd6997670ae1be88747"
+    hfe_shape:
+      ref: "Fig. 15 'DC Current Gain', p.6, 25 C, VCE = 1.0 V (solid) curve, normalized"
+      vce: 1.0
+      fit_range: [1.0e-4, 0.3]
+      points: [[1.027e-4, 0.4799], [2.0e-4, 0.538], [5.0e-4, 0.619], [1.0e-3, 0.703], [2.0e-3, 0.790], [5.0e-3, 0.905],
+               [1.0e-2, 0.986], [2.0e-2, 1.062], [5.0e-2, 1.122], [0.1, 1.111], [0.15, 1.011], [0.2, 0.898], [0.3, 0.707]]
+    hfe_spec: {I: 0.15, vce: 1.0, min: 100, max: 300, ref: "p.2 table, hFE (IC = 150 mA, VCE = 1.0 V)"}
+    hfe_table_min: [[1.0e-4, 20], [1.0e-3, 40], [1.0e-2, 80], [0.15, 100]]
+    vbe:
+      ref: "Fig. 17 'On Voltages', p.6, VBE @ VCE = 10 V, 25 C"
+      vce: 10.0
+      mode: fit
+      fit_range: [1.0e-4, 1.0e-2]
+      points: [[1.029e-4, 0.5550], [2.0e-4, 0.5733], [5.0e-4, 0.6017], [1.0e-3, 0.6217], [2.0e-3, 0.6417], [5.0e-3, 0.6700],
+               [1.0e-2, 0.6912]]
+      check_points: [[2.0e-2, 0.7117], [5.0e-2, 0.7395], [0.1, 0.7600]]
+      lowest_current: 1.029e-4
+    caps:
+      cje: 2.0e-11
+      cjc: 4.5e-12
+      ref: >-
+        Fig. 3 'Capacitances', p.3, 25 C, read by eye: emitter-base at 0.5 V (the upper curve is labelled
+        'Cobo' in the figure, but its size and the table's Ceb (30 pF max) show it is the emitter-base
+        capacitance), Ccb at 5 V
+    ft: {value: 2.5e+8, ic: 2.0e-2, vce: 10, kind: "minimum (no typical given)", ref: "p.2 table, fT"}
+    notes: "Fig. 11-14 (h parameters) are from one hand-picked high-gain and one low-gain unit, not typical: not used."
+
+  QBC549C:
+    part: "BC549C NPN (stand-in for the BC109C, decision D4)"
+    document: "onsemi, BC546 / BC547 / BC548 / BC549 / BC550 NPN Epitaxial Silicon Transistor, publication BC550/D, Rev. 6 (February 2026)"
+    url: "https://www.onsemi.com/pdf/datasheet/bc550-d.pdf"
+    sha256: "24f50538e17b40ee285c8decc1659f607369e61635a24b95c759d85f18e4a6e6"
+    hfe_shape:
+      ref: "Fig. 3 'DC Current Gain', p.3, VCE = 5 V; a FAMILY curve (~200, not grade C), used for its shape only (normalized at 2 mA)"
+      vce: 5.0
+      fit_range: [1.0e-3, 0.1]    # 150-300 mA left out: the family shape pulls the fit off where we operate (<1 mA)
+      normalize_at: 2.0e-3
+      points: [[1.0e-3, 200.1], [2.0e-3, 200.1], [5.0e-3, 200.1], [1.0e-2, 200.1], [2.0e-2, 200.1], [5.0e-2, 188.1],
+               [0.1, 178.2], [0.15, 125.5], [0.2, 96.8], [0.3, 60.3]]
+      no_low_current_data: true    # nothing below 1 mA: ISE = 0 (no low-current fall-off), an assumption
+    hfe_spec: {I: 2.0e-3, vce: 5.0, min: 420, max: 800, ref: "p.2 'hFE CLASSIFICATION', grade C (VCE = 5 V, IC = 2 mA)"}
+    hfe_table_min: [[2.0e-3, 420]]
+    vbe:
+      ref: >-
+        Fig. 2 'Transfer Characteristics', p.3, VCE = 5 V, family curve drawn as a straight line. The x
+        axis's first tick is labelled 0.1 V but the even tick spacing puts it at 0 V; with 0 V the curve
+        gives 0.675 V at 2 mA vs the table's typical VBE(on) 0.660 V (p.2), with 0.1 V it would give ~0.72 V.
+      vce: 5.0
+      mode: fit
+      fit_range: [1.0e-4, 1.0e-2]
+      points: [[1.0e-4, 0.5798], [2.0e-4, 0.6020], [5.0e-4, 0.6313], [1.0e-3, 0.6534], [2.0e-3, 0.6754], [5.0e-3, 0.7046],
+               [1.0e-2, 0.7266]]
+      check_points: [[2.0e-2, 0.7486], [5.0e-2, 0.7777], [0.1, 0.7996]]
+      table_typ: [2.0e-3, 0.660]
+      lowest_current: 1.0e-4
+    caps: {cje: 9.0e-12, cjc: 3.5e-12, ref: "p.2 table, typical: Cib (VEB = 0.5 V), Cob (VCB = 10 V)"}
+    ft: {value: 3.0e+8, ic: 1.0e-2, vce: 5, kind: "typical", ref: "p.2 table, fT"}

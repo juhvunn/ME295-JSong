@@ -65,7 +65,7 @@ def test_slew_rate(name):
 def test_open_loop_gain(name):
     aol = OPAMPS[name][2]
     res = run(f"{supplies(15)}\nVin in 0 DC 0 AC 1\nX1 in out vcc vee out {name}\nRL out 0 2k",
-              "ac dec 10 0.01 1\nwrdata ac.txt vdb(out) vdb(in,out)")
+              "set wr_singlescale\nset wr_vecnames\nac dec 10 0.01 1\nwrdata ac.txt vdb(out) vdb(in,out)")
     f, g = read_wrdata(res.run_dir / "ac.txt", 2)
     measured_db = g[0, 0] - g[0, 1]          # |Vout / (Vinp - Vinn)| at 0.01 Hz
     print(f"{name}: AOL {measured_db:.1f} dB (datasheet {20 * np.log10(aol):.1f} dB)")
@@ -123,3 +123,79 @@ def test_fitted_diode_reproduces_datasheet_points(name):
     for p, v in zip(pts, v_sim):
         print(f"{name}: I={p['I']:.3g} A  datasheet {p['V']:.4f} V  ngspice {v:.4f} V  error {1e3 * (v - p['V']):+.1f} mV")
         assert v == pytest.approx(p["V"], abs=tol(p["V"])), p["ref"]
+
+
+# ---------- transistors (B2): fitted Gummel-Poon models vs datasheet ----------
+from scripts.fit_bjts import hfe_targets, load as load_bjt_data, vbe_for as model_vbe, fit_all  # noqa: E402
+
+BJT_LIB = REPO_ROOT / "models" / "bjts_fitted.lib"
+BJT_DATA = load_bjt_data()
+BJT_PARAMS = fit_all(BJT_DATA)
+
+
+def bjt_op(name, points):
+    """points: [(Ic_target, VCE)] -> list of (Ic, Ib, VBE) from ngspice at 25 C."""
+    p = BJT_PARAMS[name]
+    body, vecs = [], []
+    for k, (ic, vce) in enumerate(points):
+        vbe = model_vbe(ic, vce, p)
+        body.append(f"Vc{k} c{k} 0 DC {vce:g}\nVb{k} b{k} 0 DC {vbe:.9g}\nQ{k} c{k} b{k} 0 {name}")
+        vecs += [f"i(vc{k})", f"i(vb{k})"]
+    net = (f"* bjt test\n{BJT_LIB.read_text(encoding='utf-8')}\n.temp 25\n" + "\n".join(body) +
+           f"\n.control\nop\nwrdata op.txt {' '.join(vecs)}\nquit\n.endc\n.end\n")
+    res = simulate(net)
+    assert res.ok, f"ngspice failed; see {res.log_path}"
+    v = np.atleast_2d(np.loadtxt(res.run_dir / "op.txt"))[0, 1::2]
+    return [(-v[2 * k], -v[2 * k + 1], model_vbe(ic, vce, p)) for k, (ic, vce) in enumerate(points)]
+
+
+def test_bjt_file_passes_sandbox_filter():
+    check_netlist(BJT_LIB.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("name", list(BJT_DATA["transistors"]))
+def test_bjt_hfe_matches_nominal_curve(name):
+    t = BJT_DATA["transistors"][name]
+    target, _ = hfe_targets(t)
+    vce = t["hfe_shape"]["vce"]
+    for (ic_t, h_t), (ic, ib, _) in zip(target, bjt_op(name, [(i, vce) for i, _ in target])):
+        print(f"{name}: Ic {ic * 1e3:.3g} mA  hFE ngspice {ic / ib:.1f}  target {h_t:.1f}")
+        assert ic == pytest.approx(ic_t, rel=0.01)
+        assert ic / ib == pytest.approx(h_t, rel=0.10)
+
+
+@pytest.mark.parametrize("name", list(BJT_DATA["transistors"]))
+def test_bjt_vbe_matches_datasheet(name):
+    vb = BJT_DATA["transistors"][name]["vbe"]
+    pts = [vb["anchor"]] if vb["mode"] == "anchor" else vb["points"]
+    for (i, v), (ic, _, vbe) in zip(pts, bjt_op(name, [(i, vb["vce"]) for i, _ in pts])):
+        print(f"{name}: Ic {ic * 1e3:.3g} mA  VBE model {vbe:.4f}  datasheet {v:.4f}")
+        assert ic == pytest.approx(i, rel=0.01)
+        assert vbe == pytest.approx(v, abs=0.010)
+
+
+@pytest.mark.parametrize("name", list(BJT_DATA["transistors"]))
+def test_bjt_hfe_within_datasheet_limits(name):
+    t = BJT_DATA["transistors"][name]
+    spec, vce = t["hfe_spec"], t["hfe_shape"]["vce"]
+    (ic, ib, _), = bjt_op(name, [(spec["I"], spec["vce"])])
+    assert spec["min"] <= ic / ib <= spec["max"]
+    for (i, mn), (ic, ib, _) in zip(t["hfe_table_min"], bjt_op(name, [(i, vce) for i, _ in t["hfe_table_min"]])):
+        assert ic / ib >= mn, f"{name}: hFE {ic / ib:.1f} below table minimum {mn} at {i * 1e3:g} mA"
+
+
+@pytest.mark.parametrize("name", list(BJT_DATA["transistors"]))
+def test_bjt_ft_near_datasheet(name):
+    f = BJT_DATA["transistors"][name]["ft"]
+    vbe = model_vbe(f["ic"], f["vce"], BJT_PARAMS[name])
+    net = (f"* ft test\n{BJT_LIB.read_text(encoding='utf-8')}\n.temp 25\nVc c 0 DC {f['vce']:g}\n"
+           f"Vb b 0 DC {vbe:.9g} AC 1\nQ1 c b 0 {name}\n.control\nset wr_singlescale\nset wr_vecnames\n"
+           f"ac dec 50 1Meg 10G\n"
+           f"wrdata ac.txt mag(i(vc)) mag(i(vb))\nquit\n.endc\n.end\n")
+    res = simulate(net)
+    assert res.ok, f"ngspice failed; see {res.log_path}"
+    freq, m = read_wrdata(res.run_dir / "ac.txt", 2)
+    beta = m[:, 0] / m[:, 1]
+    ft = 10 ** np.interp(0.0, -np.log10(beta), np.log10(freq))   # |ic/ib| = 1
+    print(f"{name}: fT {ft / 1e6:.0f} MHz (datasheet {f['value'] / 1e6:.0f} MHz, {f['kind']})")
+    assert ft == pytest.approx(f["value"], rel=0.25)

@@ -32,12 +32,12 @@ def test_llm_output_models_have_no_free_form_dicts(model):
 def test_planner_decision_converts_to_candidate():
     decision = PlannerDecision.model_validate({
         "action": "add_block", "rationale": "more grit",
-        "chain": [{"block_id": "fuzz_ff_si", "params": [{"name": "Q_model", "value": "QBC109C"}]},
+        "chain": [{"block_id": "fuzz_ff_si", "params": [{"name": "Q_model", "value": "QBC549C"}]},
                   {"block_id": "od_ts808", "params": [{"name": "drive", "value": 0.7}]}],
     })
     cand = decision.to_candidate()
     assert [b.block_id for b in cand.chain] == ["fuzz_ff_si", "od_ts808"]
-    assert cand.chain[0].params == {"Q_model": "QBC109C"}
+    assert cand.chain[0].params == {"Q_model": "QBC549C"}
     assert cand.chain[1].params == {"drive": 0.7}
     assert cand.rationale == "more grit"
 
