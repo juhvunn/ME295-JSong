@@ -8,7 +8,12 @@ except through the actions listed in DASHBOARD_SPEC.md.
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal, Optional
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+# A failed simulation has score = inf (and metrics may be inf/nan). Plain JSON has no infinity, so these are
+# written as the strings "Infinity" / "NaN" and read back as floats (otherwise inf became null and the run
+# record could not be reloaded).
+FLOAT_JSON = ConfigDict(ser_json_inf_nan="strings")
 
 
 def now() -> datetime:
@@ -89,6 +94,7 @@ class LLMUsage(BaseModel):
 
 # ---------- Checker output ----------
 class MetricResult(BaseModel):
+    model_config = FLOAT_JSON
     name: MetricName
     value: float
     status: Literal["pass", "low", "high"]
@@ -108,6 +114,7 @@ class ModelFile(BaseModel):
     status: Literal["validated", "placeholder", "unregistered"]
 
 class CheckReport(BaseModel):
+    model_config = FLOAT_JSON
     metrics: dict[str, float]
     results: list[MetricResult]
     score: float                        # weighted normalized error, 0 = all pass
@@ -171,7 +178,11 @@ class RunRecord(BaseModel):
     status: Literal["awaiting_spec_approval", "running", "awaiting_feedback",
                     "accepted", "stopped"]
     stop_reason: Optional[Literal["all_pass", "budget", "stall", "duplicate",
-                                  "human_review", "human_accept", "error"]] = None
+                                  "human_review", "human_accept", "error", "infra_error"]] = None
+    # "error": the LLM gave no valid output after its retries (a method outcome, counts as a failure).
+    # "infra_error": an exception outside the method (e.g. a file-save failure); benchmark runs that end
+    # this way are re-run and left out of results. Simulation timeouts and ngspice failures are neither:
+    # they are normal Checker reports that use budget.
     spec: Optional[TargetSpec] = None
     steps: list[Step] = Field(default_factory=list)
     best_step: Optional[int] = None     # Step.n with the lowest score

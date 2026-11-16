@@ -59,7 +59,8 @@ def finished(out_dir: Path) -> set[tuple[str, int]]:
     done = set()
     for p in out_dir.glob("*.json"):
         r = json.loads(p.read_text(encoding="utf-8"))
-        if r.get("stop_reason") and r.get("benchmark"):
+        # infra_error runs (exceptions outside the method) are re-run; every other stop reason is an outcome
+        if r.get("stop_reason") and r["stop_reason"] != "infra_error" and r.get("benchmark"):
             done.add((r["benchmark"]["target_id"], r["seed"]))
     return done
 

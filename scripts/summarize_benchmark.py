@@ -33,12 +33,19 @@ MARKER = dict(zip(METHODS, ("o", "s", "^", "D", "v")))
 GROUPS = ("A", "B", "C", "D", "Hand", "All")
 
 
-def load_runs(root: Path) -> list[RunRecord]:
+def load_runs(root: Path, infra: list | None = None) -> list[RunRecord]:
+    """Finished benchmark runs. infra_error runs (exceptions outside the method; they are re-run) are left
+    out and, if a list is given, collected in it for reporting."""
     runs = []
     for p in sorted(root.rglob("*.json")):
         r = RunRecord.model_validate_json(p.read_text(encoding="utf-8"))
-        if r.benchmark is not None and r.stop_reason is not None:
-            runs.append(r)
+        if r.benchmark is None or r.stop_reason is None:
+            continue
+        if r.stop_reason == "infra_error":
+            if infra is not None:
+                infra.append(r)
+            continue
+        runs.append(r)
     return runs
 
 
@@ -178,7 +185,8 @@ def main(argv=None) -> int:
     defaults_pass = ({tid: v["passes_at_defaults"] for tid, v in
                       yaml.safe_load(flag_file.read_text(encoding="utf-8"))["targets"].items()}
                      if flag_file.exists() else {})
-    runs = [r for r in load_runs(args.root) if r.benchmark.set == args.version]
+    infra = []
+    runs = [r for r in load_runs(args.root, infra) if r.benchmark.set == args.version]
     methods = [m for m in METHODS if any(r.mode == m for r in runs)]
     budget = max((r.sim_budget for r in runs), default=12)
     full = by_group(runs, source)
@@ -186,7 +194,10 @@ def main(argv=None) -> int:
 
     L = [f"# Benchmark {args.version}: summary", "",
          f"{len(runs)} finished runs from `{args.root}`; methods: {', '.join(methods)}; budget {budget} sims. "
-         "Success = all metrics in range (stop_reason all_pass). The oracle is not run on D or hand targets.", ""]
+         "Success = all metrics in range (stop_reason all_pass). The oracle is not run on D or hand targets. "
+         f"Infrastructure errors left out (re-run): {len(infra)}"
+         + (" (" + ", ".join(f"{r.benchmark.target_id}/{r.mode}/seed {r.seed}" for r in infra) + ")" if infra else "")
+         + ".", ""]
     L += success_table("Full set", full, methods)
     if subset:
         L += success_table(f"Subset view ({len(subset)} targets: {', '.join(sorted(subset))}); random methods "

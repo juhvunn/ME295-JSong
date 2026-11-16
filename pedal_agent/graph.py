@@ -13,6 +13,7 @@ resumed node restarts from its beginning.
 import os
 import re
 import sqlite3
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -47,10 +48,17 @@ class RunStore:
     def path(self, run_id: str) -> Path:
         return self.dir / f"{run_id}.json"
 
-    def save(self, run: RunRecord) -> None:
+    def save(self, run: RunRecord, attempts: int = 10, pause_s: float = 0.2) -> None:
         tmp = self.path(run.run_id).with_suffix(".json.tmp")
         tmp.write_text(run.model_dump_json(indent=2), encoding="utf-8")
-        os.replace(tmp, self.path(run.run_id))
+        for i in range(attempts):
+            try:
+                os.replace(tmp, self.path(run.run_id))
+                return
+            except PermissionError:      # Windows: another process (scanner, indexer, reader) has the file open
+                if i == attempts - 1:
+                    raise
+                time.sleep(pause_s)
 
     def load(self, run_id: str) -> RunRecord:
         return RunRecord.model_validate_json(self.path(run_id).read_text(encoding="utf-8"))
@@ -290,11 +298,11 @@ class Agent:
         """Run until the next pause; return its payload (None when the run has ended)."""
         try:
             result = self.graph.invoke(value, {"configurable": {"thread_id": run_id}})
-        except Exception as e:  # mark the run file as stopped, then re-raise for the caller
+        except Exception as e:  # infrastructure failure: mark the run file, then re-raise for the caller
             run = self.store.load(run_id)
             run.steps.append(Step(n=len(run.steps) + 1, agent="router", action="stop",
-                                  title="Error", why=f"{type(e).__name__}: {e}"))
-            run.status, run.stop_reason = "stopped", "error"
+                                  title="Infrastructure error", why=f"{type(e).__name__}: {e}"))
+            run.status, run.stop_reason = "stopped", "infra_error"
             self.store.save(run)
             raise
         pending = result.get("__interrupt__")

@@ -238,7 +238,7 @@ def agent_panel(run: RunRecord) -> dict:
 def repeated_runs(index: list[dict], entry: dict) -> dict | None:
     """Runs of the same spec and mode: success rate and median sims (None if only one run)."""
     same = [e for e in index if e["spec_key"] == entry["spec_key"] and e["mode"] == entry["mode"]
-            and e["stop_reason"] is not None]
+            and e["stop_reason"] not in (None, "infra_error")]
     if len(same) < 2:
         return None
     ok = [e["sims_used"] for e in same if e["stop_reason"] == "all_pass"]
