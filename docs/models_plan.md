@@ -109,6 +109,78 @@ Risk: vendor sites change URLs or block automated downloads. The checksum guaran
 everyone simulates the identical file; if a download fails, the script prints the manual
 download instructions.
 
+## B2 (revised 2026-11-16, replaces B): our own fitted transistor models
+
+**Why.** The licence check found no manufacturer transistor model that may be redistributed
+(onsemi and Central site terms forbid copying without consent; Diodes Inc. refused automated
+access), and no stable direct download URL. Decision: **B2**, our own Gummel-Poon models fitted
+to datasheet curves, committed like A1/A2. An optional **B1** cross-check comes later: you
+download one vendor model by hand into the gitignored `models/vendor/`, and we compare it with
+ours without committing it.
+
+**Scope: what matters in our circuits.** Measured by simulation (real op-amps, fitted diodes,
+*placeholder* transistors; to be re-measured after the fit):
+
+| Transistor | No signal | 300 mV, 1 kHz input |
+|---|---|---|
+| fuzz_ff_si Q1 (any fuzz setting) | 232 µA | 218–270 µA |
+| fuzz_ff_si Q2 | 0.70 mA | cut off (<10 µA) for 33–47 % of the cycle, otherwise up to 0.98 mA |
+| od_ts808 Q1/Q2 buffers (2N4401) | 313 µA | 267–360 µA |
+
+So **10 µA–1 mA is the priority range**, with the exponential turn-on below 10 µA mattering for
+fuzz Q2. Nothing runs above 1 mA. The fit covers 10 µA–10 mA where the datasheet has data; below
+the lowest datasheet point is extrapolated and reported, as for the LED.
+
+**Parts and datasheets** (typical curves preferred; URL, revision, page and SHA-256 recorded as in A1/A2):
+- `Q2N3904`: onsemi 2N3904 datasheet
+- `Q2N4401`: onsemi 2N4401 datasheet
+- `QBC549C`: a BC549C datasheet with typical hFE-vs-Ic curves (onsemi BC549B/C if it has them,
+  otherwise another manufacturer's); recorded as a **stand-in for the BC109C** (decision D4)
+
+**What is fitted, what is taken, what is assumed** (Gummel-Poon `.model … NPN`, `Tnom=25`):
+
+| Parameters | Source | Treatment |
+|---|---|---|
+| `IS`, `NF` | typical VBE(on) vs Ic curve | **fitted** (priority 10 µA–10 mA) |
+| `BF`, `ISE`, `NE`, `IKF` | typical hFE vs Ic curve | **fitted** (low-current fall-off and high-current roll-off) |
+| `CJE`, `CJC` (+ `MJE`/`MJC` defaults) | typical input/output capacitance (Cibo/Cobo) | taken from the table/figure, no fit |
+| `TF` | typical fT at its stated Ic | derived: TF ≈ 1/(2π·fT) minus the capacitance contribution; checked loosely |
+| `VAF` | only if a typical output characteristic or `hoe` is given; otherwise **assumed** (stated value) | listed as an assumption |
+| `BR`, `NR`, `VAR`, `ISC`, `NC`, `IKR`, `RB`, `RE`, `RC`, temperature parameters | not supported by audio-band, forward-active use or by the datasheets | ngspice defaults or stated values, **listed as assumptions** |
+
+**Validation tests** (`tests/test_models.py`):
+- hFE at each fitted datasheet point within **±10 %**; VBE within **±10 mV**
+- the datasheet hFE min–max at its spec current contains the model's value
+- fT at the datasheet condition within ±25 % (a loose check, since no detailed fit is done)
+- the model files pass the sandbox filter
+
+**Sensitivity** (like the LED): **min-hFE and max-hFE variants** built from the datasheet hFE range
+(BF scaled so that hFE at the spec current equals the datasheet min and max). With each variant:
+- `fuzz_ff_si`, both `Q_model` choices: bias point (V(c1), V(c2)), gain_1k_db, thd_pct, even_odd, out_pk_v
+- `od_ts808`: DC checks (vr, o1, o2) and the buffer emitter voltages
+
+Results go in `models/README.md`, written so Phase 3 can cite them.
+
+**Additions (approved 2026-11-16).**
+- Fuzz Q2's cut-off below 10 µA is set mainly by the VBE-vs-current curve (`IS`, `NF`), not by hFE.
+  Report the lowest current each datasheet VBE curve reaches. Record anything below it as
+  extrapolated (like the LED), and add VBE-extrapolation variants to the sensitivity runs so they
+  show how much the fuzz asymmetry (`even_odd`) depends on it.
+- `VAF` at a stated default is acceptable: ro ≈ VAF/Ic is far above Q1's 33 kΩ collector load.
+  Listed as an assumption.
+
+**Rename (D4).** `QBC109C` → `QBC549C` everywhere: the `fuzz_ff_si` choice, with a stand-in note in
+`block.yaml`; the placeholder in `smoke_models.lib`, renamed but still labelled placeholder;
+`typical_metrics` keys; tests. The `QBC109C` name is not kept.
+
+**Order.**
+1. Download the datasheets, read the curves (vector digitizing as in A2), then show you the available data.
+2. Fit the models, write the tests, rename.
+3. Sensitivity runs; README section.
+4. Your OK, then commit.
+
+Then the plumbing step (`real_models.lib`, `models:` setting in `config.yaml`) and D (before/after table).
+
 ## How the models plug in
 
 - New `models/real_models.lib` assembled from `opamp_macro.lib` + wrappers + `diodes_fitted.lib`
