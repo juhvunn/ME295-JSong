@@ -16,3 +16,24 @@ def f_minus3db(freq: np.ndarray, gain_db: np.ndarray) -> float:
     lf0, lf1 = np.log10(freq[i - 1]), np.log10(freq[i])
     g0, g1 = gain_db[i - 1], gain_db[i]
     return float(10 ** (lf0 + (target - g0) * (lf1 - lf0) / (g1 - g0)))
+
+
+def check_targets(metrics: dict[str, float | None], targets: list[dict]) -> list[dict]:
+    """Compare metrics with targets {"metric", "target", "tol_rel"}.
+
+    Returns one structured row per target: target, got, error (relative), met.
+    A metric that could not be measured has got=None, error=None, met=False.
+    """
+    rows = []
+    for spec in targets:
+        got = metrics.get(spec["metric"])
+        error = None if got is None else (got - spec["target"]) / spec["target"]
+        rows.append({
+            "metric": spec["metric"],
+            "target": spec["target"],
+            "got": got,
+            "error": error,
+            "tol_rel": spec["tol_rel"],
+            "met": error is not None and abs(error) <= spec["tol_rel"],
+        })
+    return rows

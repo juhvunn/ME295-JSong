@@ -5,3 +5,6 @@ pyyaml
 pydantic>=2
 python-dotenv
 pytest
+anthropic
+langgraph
+jinja2

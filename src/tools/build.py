@@ -33,19 +33,21 @@ def build_netlist(template_name: str, params: dict[str, float]) -> str:
     return Template(text).substitute(formatted)
 
 
-def diode_clipper_parameters() -> dict[str, float]:
-    """Return the shared component and protocol parameters for the clipper."""
+def load_protocol() -> dict:
     import yaml
 
     from src.config import REPO_ROOT, load_config
 
     config = load_config()
     with (REPO_ROOT / config["protocol"]).open(encoding="utf-8") as protocol_file:
-        protocol = yaml.safe_load(protocol_file)
+        return yaml.safe_load(protocol_file)
+
+
+def protocol_parameters() -> dict[str, float]:
+    """Return the template placeholders that come from the shared protocol."""
+    protocol = load_protocol()
     ac, transient = protocol["ac"], protocol["transient"]
     return {
-        "R1": 4.7e3,
-        "C1": 10e-9,
         "VIN_AMP": transient["amplitude_v"],
         "FREQ": transient["freq_hz"],
         "AC_PPD": ac["points_per_decade"],
@@ -54,3 +56,18 @@ def diode_clipper_parameters() -> dict[str, float]:
         "TSTEP": transient["t_step_s"],
         "TSTOP": transient["t_stop_s"],
     }
+
+
+def diode_clipper_parameters() -> dict[str, float]:
+    """Return the shared component and protocol parameters for the clipper."""
+    return {"R1": 4.7e3, "C1": 10e-9, **protocol_parameters()}
+
+
+def build_block_netlist(template_name: str, values: dict[str, float]) -> str:
+    """Fill a block template with component values plus the protocol placeholders it uses."""
+    path = TEMPLATES_DIR / template_name
+    if path.parent != TEMPLATES_DIR or not path.is_file():
+        raise ValueError(f"unknown template {template_name!r}")
+    required = set(PLACEHOLDER_RE.findall(path.read_text(encoding="utf-8")))
+    shared = {k: v for k, v in protocol_parameters().items() if k in required}
+    return build_netlist(template_name, {**shared, **values})

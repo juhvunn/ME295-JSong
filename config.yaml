@@ -1,7 +1,9 @@
 # Project configuration. The model ID is read ONLY from here (never hardcoded).
 llm:
-  model_id: "MODEL_ID_PLACEHOLDER"   # TODO: pin an exact model ID before running agents
+  model_id: "claude-opus-5-5"       # pinned; the only place the model ID is set
   max_retries: 3                     # bounded retries on Pydantic validation failure
+  max_tokens: 16000
+  effort: "medium"                   # low/medium/high/xhigh/max (output_config.effort)
 
 ngspice:
   # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.
