@@ -1,0 +1,66 @@
+* =====================================================================
+* od_ts808 : Overdrive block, based on GGG ITS8 (Ibanez TS-808 replica)
+* Reference: GGG ITS8 schematic (2009Sep18) + parts layout (2019Oct8)
+*   https://generalguitargadgets.com/effects-projects/distortion/tube-screamer/
+* Part designators match the GGG documents.
+* Excluded: bypass switching (Sw1), LED indicator (R23), D5, C12, jacks.
+* Ports: in out vcc gnd
+* Rendered by build.py (Jinja2). Pot values are pre-computed resistances.
+* =====================================================================
+.subckt od_ts808 in out vcc gnd
+
+* --- Bias reference Vr = Vcc/2 -------------------------------------
+R9   vcc vr   10k
+R10  vr  gnd  10k
+C7   vr  gnd  47u
+
+* --- Input buffer (Q1 emitter follower) ----------------------------
+R22  in  gnd  1.5Meg
+C1   in  n1   22n
+R1   n1  b1   1k
+R2   b1  vr   511k
+Q1   vcc b1 e1 {{ bjt_model }}
+R3   e1  gnd  10k
+C2   e1  p1   1u
+R5   p1  vr   10k
+
+* --- Clipping amplifier (IC1a) -------------------------------------
+X1A  p1 m1 vcc gnd o1 {{ opamp_model }}
+R6   vr  n2   4.7k
+C3   n2  m1   {{ C3 }}
+R7   m1  n3   51k
+R19  n3  o1   {{ R19 }}          ; Drive (500k log, rheostat)
+{%- if D_clip == "si" %}
+D1   m1  o1   {{ diode_si_model }}
+D2   o1  m1   {{ diode_si_model }}
+{%- elif D_clip == "led" %}
+D3   m1  o1   {{ diode_led_model }}
+D4   o1  m1   {{ diode_led_model }}
+{%- endif %}
+C4   m1  o1   {{ C4 }}
+
+* --- Passive LPF + active tone (IC1b) ------------------------------
+R8   o1  t1   1k
+R16  t1  vr   10k
+C5   t1  gnd  220n
+X1B  t1 m2 vcc gnd o2 {{ opamp_model }}
+R17  o2  m2   1k
+R20A t1  w1   {{ R20A }}         ; Tone (20k), + side to wiper
+R20B w1  m2   {{ R20B }}         ; Tone (20k), wiper to - side
+C9   w1  n4   220n
+R11  n4  gnd  220
+
+* --- Level + output buffer (Q2 emitter follower) -------------------
+C8   o2  n5   1u
+R18  n5  v1   1k
+R21A w2  vr   {{ R21A }}         ; Level (100k linear), wiper to Vr (low end)
+R21B v1  w2   {{ R21B }}         ; Level (100k linear), top to wiper
+C10  w2  b2   100n
+R12  b2  vr   511k
+Q2   vcc b2 e2 {{ bjt_model }}
+R14  e2  gnd  10k
+R15  e2  n6   100
+C11  n6  out  10u
+R13  out gnd  10k
+
+.ends od_ts808
