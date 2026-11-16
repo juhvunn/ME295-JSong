@@ -3,7 +3,7 @@ import math
 
 import yaml
 
-from src.config import REPO_ROOT, load_config
+from pedal_agent.config import REPO_ROOT, load_config
 
 
 def load_block_library() -> dict:

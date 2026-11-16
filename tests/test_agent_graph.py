@@ -4,10 +4,10 @@ from types import SimpleNamespace
 import pytest
 from langgraph.types import Command
 
-from src.agents.graph import PlannerDecision, build_graph
-from src.agents.llm import AnthropicLLM, LLMOutputError
-from src.memory import SessionMemory
-from src.tools.validate import validate_circuit
+from pedal_agent.agents.graph import PlannerDecision, build_graph
+from pedal_agent.agents.llm import AnthropicLLM, LLMOutputError
+from pedal_agent.memory import SessionMemory
+from pedal_agent.tools.validate import validate_circuit
 from tests.test_rc_lowpass import FC, ngspice_available
 
 needs_ngspice = pytest.mark.skipif(not ngspice_available(), reason="ngspice executable from config.yaml not found")

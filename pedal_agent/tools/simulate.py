@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.config import REPO_ROOT, load_config
+from pedal_agent.config import REPO_ROOT, load_config
 
 # Dot-directives that are never allowed anywhere in a netlist.
 FORBIDDEN_DIRECTIVES = (".shell", ".system", ".include", ".inc", ".lib", ".exec")

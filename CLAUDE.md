@@ -37,7 +37,8 @@ reach more specs than a fixed-topology parameter search and a single LLM?
 - Verify the Checker on known circuits before trusting results: non-inverting op-amp gain (1+Rf/Rg), RC low-pass -3 dB at 1/(2*pi*R*C), pure sine THD ~ 0.
 
 ## Environment
-Windows, VS Code, conda env ME295, ngspice 41, Python 3.12.15. Repo: local only (D:\Users\jsong3\ME295-JSong, no remote).
+Windows, VS Code, conda env ME295, ngspice 41 (inside the env: Library/bin/ngspice_con.exe), Python 3.12.15.
+Repo: D:\Users\jsong3\ME295-JSong, remote origin = https://github.com/juhvunn/ME295-JSong (main).
 Note: `logs/` holds ngspice run logs; `runs/<id>/` holds netlists and simulation output (gitignored).
 
 ## Workflow for you (Claude Code)
@@ -45,6 +46,12 @@ Note: `logs/` holds ngspice run logs; `runs/<id>/` holds netlists and simulation
 - Append every Claude contribution (date, what, files) to LOG.md for my AI Use Declaration.
 - Do not invent results. If something fails, report the real error.
 
-## Target layout
-config.yaml, blocks/block_library.yaml, protocol/protocol_v1.yaml, targets/targets_v1.yaml,
-src/tools/{validate,build,simulate,evaluate}.py, src/agents/, src/memory.py, src/baselines/, tests/, runs/ (gitignored), README.md, LOG.md
+## Layout
+Plan and phases: docs/DASHBOARD_SPEC.md. Package: pedal_agent/ (run with `python -m ...` from the repo root).
+- pedal_agent/{schemas,build,harness,checker}.py: RunRecord contract, Jinja2 block rendering, pickup harness, Checker
+- pedal_agent/tools/simulate.py: the only way to run ngspice (directive filter, timeout); models are pasted in, never .include
+- pedal_agent/reference/: known circuits (RC low-pass, diode clipper) for verifying the Checker
+- pedal_agent/agents/, memory.py, baselines/, config.py; tools/{validate,evaluate}.py (pre-Phase-2 loop)
+- blocks/<id>/{block.yaml,template.cir.j2}: pedal blocks; blocks/block_library.yaml: old toy catalog (pre-Phase-2 loop)
+- models/smoke_models.lib: PLACEHOLDER models, not real parts
+- examples/, tests/ (tests/smoke_block.py: `python -m tests.smoke_block`), runs/ (gitignored except runs/example-*.json)

@@ -2,8 +2,9 @@
 from pathlib import Path
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from pedal_agent.config import REPO_ROOT
 
-LIB = Path(__file__).parent
+BLOCKS_DIR = REPO_ROOT / "blocks"
 R_MIN = 1.0  # ohm, avoid zero-ohm pot legs
 
 SI = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "m": 1e-3, "k": 1e3, "Meg": 1e6}
@@ -27,8 +28,8 @@ def taper(x, kind):
     raise ValueError(kind)
 
 def load_block(block_id):
-    d = LIB / "blocks" / block_id
-    return d, yaml.safe_load((d / "block.yaml").read_text())
+    d = BLOCKS_DIR / block_id
+    return d, yaml.safe_load((d / "block.yaml").read_text(encoding="utf-8"))
 
 def render(block_id, overrides=None):
     d, meta = load_block(block_id)

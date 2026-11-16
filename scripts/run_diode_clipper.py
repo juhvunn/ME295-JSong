@@ -7,9 +7,9 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import REPO_ROOT, load_config  # noqa: E402
-from src.tools.build import build_netlist, diode_clipper_parameters  # noqa: E402
-from src.tools.simulate import read_wrdata, simulate  # noqa: E402
+from pedal_agent.config import REPO_ROOT, load_config  # noqa: E402
+from pedal_agent.reference.build import build_netlist, diode_clipper_parameters  # noqa: E402
+from pedal_agent.tools.simulate import read_wrdata, simulate  # noqa: E402
 
 
 def main() -> int:

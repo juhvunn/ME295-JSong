@@ -1,6 +1,6 @@
-"""build_netlist: fill a trusted template with numeric parameter values.
+"""Reference-circuit netlists (RC low-pass, diode clipper): fill a trusted template with numbers.
 
-Only templates in src/tools/templates/ are used, and every value must be a finite
+Only templates in pedal_agent/reference/templates/ are used, and every value must be a finite
 number, so no LLM-generated text ever reaches the netlist.
 """
 import math
@@ -36,7 +36,7 @@ def build_netlist(template_name: str, params: dict[str, float]) -> str:
 def load_protocol() -> dict:
     import yaml
 
-    from src.config import REPO_ROOT, load_config
+    from pedal_agent.config import REPO_ROOT, load_config
 
     config = load_config()
     with (REPO_ROOT / config["protocol"]).open(encoding="utf-8") as protocol_file:

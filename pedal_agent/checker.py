@@ -1,14 +1,18 @@
 """Deterministic Checker: simulate a candidate chain, compute metrics, judge vs targets.
 Phase-1 version: single-block chains (multi-block chains in Phase 2)."""
-import hashlib, os, subprocess, tempfile
+import hashlib, os
 from pathlib import Path
 import numpy as np
-from build import render, load_block
-from harness import netlist
-from schemas import Candidate, CheckReport, MetricResult, Plots, TargetSpec
+from pedal_agent.build import render, load_block
+from pedal_agent.config import REPO_ROOT
+from pedal_agent.harness import netlist
+from pedal_agent.schemas import Candidate, CheckReport, MetricResult, Plots, TargetSpec
+from pedal_agent.tools.simulate import simulate as run_ngspice
 
-LIB = Path(__file__).parent
-MODELS = os.environ.get("MODELS", str(LIB / "models" / "smoke_models.lib"))
+MODELS = os.environ.get("MODELS", str(REPO_ROOT / "models" / "smoke_models.lib"))
+
+def models_text():
+    return Path(MODELS).read_text(encoding="utf-8")
 
 def _harmonics(t, v, f0, n=10):
     v = v - v.mean(); N = len(t)
@@ -25,12 +29,10 @@ def simulate(cand: Candidate, f0=1000.0, amp=0.3):
     ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(f'v(x1.{n})' for n in nodes) or 'v(out)'}",
                       "ac dec 50 20 20k", "wrdata ac.txt vdb(out)",
                       "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"])
-    net = netlist(render(blk.block_id, blk.params), meta["subckt"], MODELS, amp, f0, ctrl)
+    net = netlist(render(blk.block_id, blk.params), meta["subckt"], models_text(), amp, f0, ctrl)
     sha = hashlib.sha256(net.encode()).hexdigest()
-    with tempfile.TemporaryDirectory() as td:
-        (Path(td) / "c.cir").write_text(net)
-        r = subprocess.run(["ngspice", "-b", "c.cir"], cwd=td, capture_output=True, text=True, timeout=300)
-        out = {f: np.loadtxt(Path(td) / f"{f}.txt") for f in ("op", "ac", "tran") if (Path(td) / f"{f}.txt").exists()}
+    r = run_ngspice(net)  # sandboxed: directive filter, timeout, runs/<id>/ + logs/<id>.log
+    out = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran") if (r.run_dir / f"{f}.txt").exists()}
     return meta, nodes, out, sha, r
 
 def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
@@ -38,7 +40,7 @@ def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
     meta, nodes, out, sha, r = simulate(cand, f0, amp)
     if not all(k in out for k in ("op", "ac", "tran")):
         return CheckReport(metrics={}, results=[], score=float("inf"), dc_ok=False,
-                           errors=["ngspice failed: " + r.stdout[-400:]], netlist_sha256=sha)
+                           errors=[f"ngspice failed (returncode={r.returncode}, timed_out={r.timed_out}); see {r.log_path}"], netlist_sha256=sha)
     # DC sanity
     dc = dict(zip(nodes, np.atleast_2d(out["op"])[0, 1::2]))
     errors = [f"DC {n}={dc[c['node']]:.2f} V outside {c['expect']}"

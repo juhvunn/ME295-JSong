@@ -16,9 +16,9 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import REPO_ROOT, load_config  # noqa: E402
-from src.tools.evaluate import f_minus3db  # noqa: E402
-from src.tools.simulate import read_wrdata  # noqa: E402
+from pedal_agent.config import REPO_ROOT, load_config  # noqa: E402
+from pedal_agent.tools.evaluate import f_minus3db  # noqa: E402
+from pedal_agent.tools.simulate import read_wrdata  # noqa: E402
 
 
 def _latest_run_dir() -> Path:

@@ -1,9 +1,7 @@
 """pytest: Checker contract (runs ngspice with placeholder models)."""
-import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from schemas import TargetSpec, MetricTarget, Candidate, BlockInstance, RunRecord
-from checker import check
+from pedal_agent.schemas import TargetSpec, MetricTarget, Candidate, BlockInstance, RunRecord
+from pedal_agent.checker import check
 
 SPEC = TargetSpec(goal_text="test", targets=[
     MetricTarget(name="ac_peak_hz", lo=500, hi=1200, label="Mid peak"),
@@ -28,4 +26,4 @@ def test_fuzz_is_asymmetric_distortion_plus_is_symmetric():
 def test_example_run_record_roundtrip():
     p = Path(__file__).resolve().parents[1] / "runs" / "example-jazz-christmas.json"
     if p.exists():
-        RunRecord.model_validate_json(p.read_text())
+        RunRecord.model_validate_json(p.read_text(encoding="utf-8"))

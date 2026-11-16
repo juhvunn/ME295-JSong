@@ -6,10 +6,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.config import load_config
-from src.tools.build import build_netlist
-from src.tools.evaluate import f_minus3db
-from src.tools.simulate import UnsafeNetlistError, check_netlist, read_wrdata, simulate
+from pedal_agent.config import load_config
+from pedal_agent.reference.build import build_netlist
+from pedal_agent.tools.evaluate import f_minus3db
+from pedal_agent.tools.simulate import UnsafeNetlistError, check_netlist, read_wrdata, simulate
 
 R, C = 10e3, 10e-9
 FC = 1 / (2 * math.pi * R * C)  # ~1591.5 Hz

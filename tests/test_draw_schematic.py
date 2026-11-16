@@ -1,5 +1,5 @@
 """Ensure the schematic reflects every component in the rendered template."""
-from src.tools.build import TEMPLATES_DIR, build_netlist, diode_clipper_parameters
+from pedal_agent.reference.build import TEMPLATES_DIR, build_netlist, diode_clipper_parameters
 from scripts.draw_schematic import TEMPLATE_NAME, draw_schematic, parse_components
 
 

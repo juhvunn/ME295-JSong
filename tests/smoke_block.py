@@ -1,16 +1,14 @@
 """Smoke test for any library block.
-Usage: python tests/smoke_block.py <block_id> [<block_id> ...]
+Usage: python -m tests.smoke_block <block_id> [<block_id> ...]
 Runs DC checks, AC response and 1 kHz THD for every D_clip / Q_model choice.
 Uses placeholder models unless the MODELS env var points to real ones."""
-import os, sys, subprocess, tempfile
-from pathlib import Path
+import sys
 import numpy as np
-LIB = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(LIB))
-from build import render, load_block
-from harness import netlist
+from pedal_agent.build import BLOCKS_DIR, render, load_block
+from pedal_agent.checker import models_text
+from pedal_agent.harness import netlist
+from pedal_agent.tools.simulate import simulate as run_ngspice
 
-MODELS = os.environ.get("MODELS", str(LIB / "models" / "smoke_models.lib"))
 F0 = 1000.0
 AMPS = (0.05, 0.5)      # pickup EMF peak (V)
 
@@ -23,16 +21,10 @@ ac dec 50 20 20k
 wrdata ac.txt vdb(out)
 tran 5u 60m 40m
 wrdata tran.txt v(out)"""
-    net = netlist(render(block_id, overrides), meta["subckt"], MODELS, amp, F0, ctrl)
-    with tempfile.TemporaryDirectory() as td:
-        (Path(td) / "c.cir").write_text(net)
-        r = subprocess.run(["ngspice", "-b", "c.cir"], cwd=td, capture_output=True,
-                           text=True, timeout=300)
-        res = {}
-        for f in ("op", "ac", "tran"):
-            fp = Path(td) / f"{f}.txt"
-            if fp.exists():
-                res[f] = np.loadtxt(fp)
+    net = netlist(render(block_id, overrides), meta["subckt"], models_text(), amp, F0, ctrl)
+    r = run_ngspice(net)
+    res = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran")
+           if (r.run_dir / f"{f}.txt").exists()}
     return r, res
 
 def harmonics(t, v, n=10):
@@ -65,7 +57,7 @@ def run_block(block_id):
         for amp in AMPS:
             r, res = simulate(block_id, ov, amp, nodes)
             if not all(k in res for k in ("op", "ac", "tran")):
-                print(f"  {var}: SIMULATION FAILED\n{r.stdout[-800:]}")
+                print(f"  {var}: SIMULATION FAILED\nsee {r.log_path}")
                 ok_all = False; continue
             opv = np.atleast_2d(res["op"])[0, 1::2]
             dc = {n: v for n, v in zip(nodes, opv)}
@@ -80,7 +72,7 @@ def run_block(block_id):
     return ok_all
 
 if __name__ == "__main__":
-    ids = sys.argv[1:] or sorted(p.name for p in (LIB / "blocks").iterdir() if p.is_dir())
+    ids = sys.argv[1:] or sorted(p.name for p in BLOCKS_DIR.iterdir() if p.is_dir())
     results = {b: run_block(b) for b in ids}
     print("\nSummary:", {b: "PASS" if ok else "FAIL" for b, ok in results.items()})
     sys.exit(0 if all(results.values()) else 1)

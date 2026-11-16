@@ -4,10 +4,11 @@ PICKUP = {"R": "6k", "L": "2.5", "C_cable": "470p"}
 LOAD = "1Meg"
 VCC = 9.0
 
-def netlist(block_subckt, subckt_name, models_path, amp, f0, control):
+def netlist(block_subckt, subckt_name, models_text, amp, f0, control):
+    """models_text is pasted in (no .include: the simulate() filter rejects it)."""
     p = PICKUP
     return f"""* harness: {subckt_name}
-.include {models_path}
+{models_text}
 {block_subckt}
 Vcc vcc 0 {VCC}
 Vsrc emf 0 dc 0 ac 1 sin(0 {amp} {f0})

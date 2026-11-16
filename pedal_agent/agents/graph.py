@@ -15,12 +15,12 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
-from src.agents.llm import StructuredLLM
-from src.memory import SessionMemory
-from src.tools.build import build_block_netlist, load_protocol
-from src.tools.evaluate import check_targets, f_minus3db
-from src.tools.simulate import read_wrdata, simulate
-from src.tools.validate import load_block_library, validate_circuit
+from pedal_agent.agents.llm import StructuredLLM
+from pedal_agent.memory import SessionMemory
+from pedal_agent.reference.build import build_block_netlist, load_protocol
+from pedal_agent.tools.evaluate import check_targets, f_minus3db
+from pedal_agent.tools.simulate import read_wrdata, simulate
+from pedal_agent.tools.validate import load_block_library, validate_circuit
 
 PLANNER_SYSTEM = """You are the Planner in a guitar preamp circuit design loop.
 Propose one candidate circuit from the block catalog so that its measured metrics meet the targets.

@@ -14,8 +14,8 @@ import schemdraw.elements as elm
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import REPO_ROOT  # noqa: E402
-from src.tools.build import build_netlist, diode_clipper_parameters  # noqa: E402
+from pedal_agent.config import REPO_ROOT  # noqa: E402
+from pedal_agent.reference.build import build_netlist, diode_clipper_parameters  # noqa: E402
 
 TEMPLATE_NAME = "diode_clipper.cir"
 

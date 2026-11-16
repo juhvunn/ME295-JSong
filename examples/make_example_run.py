@@ -4,8 +4,8 @@ against a realistic file before the agent exists. Planner text is hand-written."
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from schemas import *
-from checker import check
+from pedal_agent.schemas import *
+from pedal_agent.checker import check
 
 spec = TargetSpec(
     goal_text="Warm, mid-forward lead tone with light breakup when picking hard.",
@@ -33,7 +33,7 @@ run = RunRecord(run_id="example-jazz-christmas", project_id="jazz-christmas",
                 model_id="claude-opus-5-5", effort="[EFFORT]", status="awaiting_feedback",
                 stop_reason="human_review", spec=spec, steps=steps, best_step=best.n, sims_used=2)
 out = Path(__file__).resolve().parents[1] / "runs" / f"{run.run_id}.json"
-out.write_text(run.model_dump_json(indent=2))
+out.write_text(run.model_dump_json(indent=2), encoding="utf-8")
 for s in steps:
     if s.report:
         print(s.title, {r.name: (round(r.value, 2), r.status) for r in s.report.results}, "score", round(s.report.score, 3))

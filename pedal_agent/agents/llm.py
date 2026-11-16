@@ -7,7 +7,7 @@ from typing import Protocol, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from src.config import load_config
+from pedal_agent.config import load_config
 
 T = TypeVar("T", bound=BaseModel)
 
