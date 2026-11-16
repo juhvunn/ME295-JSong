@@ -21,7 +21,7 @@ ac dec 50 20 20k
 wrdata ac.txt vdb(out)
 tran 5u 60m 40m
 wrdata tran.txt v(out)"""
-    net = netlist(render(block_id, overrides), meta["subckt"], models_text(), amp, F0, ctrl)
+    net = netlist([(render(block_id, overrides), meta["subckt"])], models_text(), amp, F0, ctrl)
     r = run_ngspice(net)
     res = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran")
            if (r.run_dir / f"{f}.txt").exists()}

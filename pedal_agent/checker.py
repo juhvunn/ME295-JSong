@@ -1,5 +1,4 @@
-"""Deterministic Checker: simulate a candidate chain, compute metrics, judge vs targets.
-Phase-1 version: single-block chains (multi-block chains in Phase 2)."""
+"""Deterministic Checker: simulate a candidate chain (1-3 blocks), compute metrics, judge vs targets."""
 import hashlib, os
 from pathlib import Path
 import numpy as np
@@ -21,31 +20,33 @@ def _harmonics(t, v, f0, n=10):
     return np.array([sp[np.argmin(abs(f - k * f0))] for k in range(1, n + 1)])
 
 def simulate(cand: Candidate, f0=1000.0, amp=0.3):
-    if len(cand.chain) != 1:
-        raise NotImplementedError("multi-block chains: Phase 2")
-    blk = cand.chain[0]
-    _, meta = load_block(blk.block_id)
-    nodes = [c["node"] for c in meta.get("dc_checks", {}).values()]
-    ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(f'v(x1.{n})' for n in nodes) or 'v(out)'}",
+    """One netlist for the whole chain; DC checks of block i are probed as v(x<i>.<node>)."""
+    blocks, probes = [], []   # probes: (label, vector, expect)
+    for i, blk in enumerate(cand.chain, start=1):
+        _, meta = load_block(blk.block_id)
+        blocks.append((render(blk.block_id, blk.params), meta["subckt"]))
+        prefix = f"{blk.block_id}." if len(cand.chain) > 1 else ""
+        probes += [(prefix + name, f"v(x{i}.{c['node']})", c["expect"])
+                   for name, c in meta.get("dc_checks", {}).items()]
+    ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(v for _, v, _ in probes) or 'v(out)'}",
                       "ac dec 50 20 20k", "wrdata ac.txt vdb(out)",
                       "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"])
-    net = netlist(render(blk.block_id, blk.params), meta["subckt"], models_text(), amp, f0, ctrl)
+    net = netlist(blocks, models_text(), amp, f0, ctrl)
     sha = hashlib.sha256(net.encode()).hexdigest()
     r = run_ngspice(net)  # sandboxed: directive filter, timeout, runs/<id>/ + logs/<id>.log
     out = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran") if (r.run_dir / f"{f}.txt").exists()}
-    return meta, nodes, out, sha, r
+    return probes, out, sha, r
 
 def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
     f0, amp = spec.test_signal["f0_hz"], spec.test_signal["amp_v"]
-    meta, nodes, out, sha, r = simulate(cand, f0, amp)
+    probes, out, sha, r = simulate(cand, f0, amp)
     if not all(k in out for k in ("op", "ac", "tran")):
         return CheckReport(metrics={}, results=[], score=float("inf"), dc_ok=False,
                            errors=[f"ngspice failed (returncode={r.returncode}, timed_out={r.timed_out}); see {r.log_path}"], netlist_sha256=sha)
     # DC sanity
-    dc = dict(zip(nodes, np.atleast_2d(out["op"])[0, 1::2]))
-    errors = [f"DC {n}={dc[c['node']]:.2f} V outside {c['expect']}"
-              for n, c in meta.get("dc_checks", {}).items()
-              if not c["expect"][0] <= dc[c["node"]] <= c["expect"][1]]
+    dc = np.atleast_2d(out["op"])[0, 1::2]
+    errors = [f"DC {label}={v:.2f} V outside {expect}"
+              for (label, _, expect), v in zip(probes, dc) if not expect[0] <= v <= expect[1]]
     ac, tr = out["ac"], out["tran"]
     i = ac[:, 1].argmax()
     h = _harmonics(tr[:, 0], tr[:, 3], f0)
