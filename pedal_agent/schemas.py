@@ -148,12 +148,25 @@ class Step(BaseModel):
 
 TOPOLOGY_ACTIONS = {"swap_block", "add_block", "remove_block"}
 
+Mode = Literal["agent", "baseline_fixed_topology", "random_catalog", "random_fixed_topology",
+               "random_fixed_topology_oracle"]
+
+class BenchmarkRef(BaseModel):
+    """Benchmark target a run belongs to (docs/phase3_plan.md). The hidden solution is never
+    stored here; only the oracle's start chain is the solution's chain (at defaults)."""
+    set: str                            # e.g. "v1"
+    target_id: str
+    category: Literal["A", "B", "C", "D"]
+    start_chain: list[BlockInstance]    # simulated as the first step: [od_ts808] defaults (oracle: solution chain)
+
 class RunRecord(BaseModel):
     run_id: str
     project_id: str
     model_id: str                       # pinned, e.g. "claude-opus-5-5"
     effort: str                         # pinned effort level
-    mode: Literal["agent", "baseline_fixed_topology"] = "agent"
+    mode: Mode = "agent"
+    seed: Optional[int] = None          # for the random baselines (and repeat bookkeeping)
+    benchmark: Optional[BenchmarkRef] = None   # set for benchmark runs: pre-approved spec, common start, benchmark stop rules
     created_at: datetime = Field(default_factory=now)
     status: Literal["awaiting_spec_approval", "running", "awaiting_feedback",
                     "accepted", "stopped"]

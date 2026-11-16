@@ -6,6 +6,8 @@ Called after every Planner attempt (checked, invalid, or duplicate). Rules, in o
   stall      the best score has not improved in the last `stall_checks` checks
   duplicate  the last two Planner proposals were both duplicates of earlier candidates
 all_pass, stall and duplicate only look at steps after the latest human feedback.
+Benchmark runs (run.benchmark set) use only all_pass and budget (with the Planner-call cap);
+their common start step counts as a check like any Planner proposal.
 """
 from dataclasses import dataclass
 
@@ -61,10 +63,13 @@ def route(run: RunRecord, cfg: RouterConfig) -> str | None:
     """Return a stop_reason, or None to continue with the Planner."""
     recent = since_feedback(run)
     planned = [s for s in recent if s.agent == "planner"]
-    if planned and planned[-1].report is not None and all_pass(planned[-1]):
+    proposals = [s for s in recent if s.candidate is not None]   # planner steps and the benchmark start step
+    if proposals and proposals[-1].report is not None and all_pass(proposals[-1]):
         return "all_pass"
     if run.sims_used >= run.sim_budget or len(planner_steps(run)) >= cfg.planner_calls_per_sim * run.sim_budget:
         return "budget"
+    if run.benchmark is not None:      # benchmark stop rules: no stall, no duplicate stop
+        return None
     scores = [s.report.score for s in recent if s.report is not None]
     n = cfg.stall_checks
     if len(scores) > n and min(scores[-n:]) >= min(scores[:-n]):

@@ -33,6 +33,9 @@ enforces this.
    | even_odd | m ÷ 1.5 … m × 1.5, widened to at least ±0.02 (symmetric clipping gives values near 0) |
 
 4. **Check the solution passes its own spec,** by re-simulating it (sims are deterministic).
+   **Exclude targets that `od_ts808` at its defaults already passes:** every method would solve them
+   at simulation 1, so they carry no information. The number of candidates excluded for this reason
+   is recorded with the set.
 5. **Classify the target empirically,** relative to the **start chain `[od_ts808]`** (P1). The evidence
    counts (samples run, samples passing) are recorded **per target**:
    - **A: start-chain reachable:** the solution is the start chain, or at least one of 100 random
@@ -115,6 +118,9 @@ python -m scripts.run_benchmark --set v1 --methods random_catalog random_fixed_t
   | flagged | number of runs with `placeholder_or_unvalidated = true` (must be 0) |
 
   Plus a per-target table (success count per method), so it's visible *which* targets need topology changes.
+- **Plot:** cumulative success rate vs number of simulations used (1–12), one line per method,
+  overall and per category A/B/C. Saved as `success_vs_sims.png`, with the underlying numbers in
+  `success_vs_sims.csv`.
 
 **Rough run time** for the non-AI methods: 30 targets × 12 sims × 5 repeats × 3 methods = 5400 sims,
 about 45–90 minutes. Option: `--workers N` (parallel ngspice processes) later if needed.

@@ -27,8 +27,8 @@ from pedal_agent.config import REPO_ROOT, load_config
 from pedal_agent.llm import LLM, LLMOutputError
 from pedal_agent.prompts import planner_prompts, tone_prompts
 from pedal_agent.router import RouterConfig, best_step, find_duplicate, route
-from pedal_agent.schemas import (Candidate, MetricTarget, PlannerDecision, RunRecord, Step, TargetSpec,
-                                 ToneDraft, now)
+from pedal_agent.schemas import (BenchmarkRef, Candidate, MetricTarget, PlannerDecision, RunRecord, Step,
+                                 TargetSpec, ToneDraft, now)
 from pedal_agent.validate import full_params, validate
 
 
@@ -75,6 +75,21 @@ def new_run(goal: str, llm: LLM, genre: str | None = None, mode: str = "agent",
         sim_budget=cfg["run"]["sim_budget"],
         price_in_per_mtok=cfg["llm"]["price_in_per_mtok"] if llm.model_id == cfg["llm"]["model_id"] else 0.0,
         price_out_per_mtok=cfg["llm"]["price_out_per_mtok"] if llm.model_id == cfg["llm"]["model_id"] else 0.0,
+    )
+
+
+def new_benchmark_run(spec: TargetSpec, ref: BenchmarkRef, llm: LLM, mode: str = "agent",
+                      seed: int | None = None, cfg: dict | None = None) -> RunRecord:
+    """A run on a pre-approved benchmark spec: no Tone Analyst, common start step, benchmark stop rules."""
+    cfg = cfg or load_config()
+    spec = spec.model_copy(update={"approved": True, "approved_at": spec.approved_at or now()})
+    real = llm.model_id == cfg["llm"]["model_id"]
+    return RunRecord(
+        run_id=f"{datetime.now():%Y%m%d-%H%M%S}-{ref.set}-{ref.target_id}-{mode}-{uuid.uuid4().hex[:4]}",
+        project_id=f"benchmark-{ref.set}", model_id=llm.model_id, effort=llm.effort, mode=mode,
+        status="running", spec=spec, sim_budget=cfg["run"]["sim_budget"], seed=seed, benchmark=ref,
+        price_in_per_mtok=cfg["llm"]["price_in_per_mtok"] if real else 0.0,
+        price_out_per_mtok=cfg["llm"]["price_out_per_mtok"] if real else 0.0,
     )
 
 
@@ -127,10 +142,28 @@ def build_graph(llm: LLM, store: RunStore, checkpointer, router_cfg: RouterConfi
         return commit(run, "end")
 
     def last_valid(run: RunRecord, before: int) -> Candidate | None:
-        """Candidate of the latest planner step before step n=`before` that passed Validate."""
-        steps = [s for s in run.steps if s.agent == "planner" and s.n < before
+        """Candidate of the latest valid proposal before step n=`before`: a planner step that passed
+        Validate, or the benchmark start step (router, initial_chain)."""
+        steps = [s for s in run.steps if s.agent in ("planner", "router") and s.n < before
                  and s.candidate is not None and not s.validation_errors]
         return steps[-1].candidate if steps else None
+
+    def benchmark_start(state: AgentState) -> dict:
+        """Benchmark runs: pre-approved spec, then the common start chain at its defaults (1 simulation)."""
+        run = load(state)
+        b = run.benchmark
+        add_step(run, agent="human", action="human_approve_spec",
+                 title="Target spec approved (benchmark spec, pre-approved)",
+                 why=f"benchmark {b.set} {b.target_id}, category {b.category}")
+        cand = Candidate(chain=b.start_chain, rationale="common benchmark start (defaults)")
+        step = add_step(run, agent="router", action="initial_chain",
+                        title="Benchmark start: " + " → ".join(x.block_id for x in b.start_chain) + " (defaults)",
+                        why=cand.rationale, candidate=cand)
+        step.report = check(cand, run.spec)
+        run.sims_used += 1
+        run.best_step = best_step(run).n
+        run.status = "running"
+        return commit(run, "router")
 
     def tone_analyst(state: AgentState) -> dict:
         run = load(state)
@@ -231,7 +264,10 @@ def build_graph(llm: LLM, store: RunStore, checkpointer, router_cfg: RouterConfi
                      ("validate", validate_node), ("check", check_node), ("router", router), ("feedback", feedback)]:
         g.add_node(name, fn)
     goto = lambda state: state["goto"]  # noqa: E731
-    g.add_edge(START, "tone_analyst")
+    g.add_node("benchmark_start", benchmark_start)
+    g.add_conditional_edges(START, lambda state: "benchmark_start" if state["run"].get("benchmark") else "tone_analyst",
+                            {"benchmark_start": "benchmark_start", "tone_analyst": "tone_analyst"})
+    g.add_edge("benchmark_start", "router")
     g.add_conditional_edges("tone_analyst", goto, {"approve_spec": "approve_spec", "end": END})
     g.add_conditional_edges("approve_spec", goto, {"planner": "planner", "end": END})
     g.add_conditional_edges("planner", goto, {"validate": "validate", "end": END})

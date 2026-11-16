@@ -115,7 +115,8 @@ def attempt_line(s: Step) -> dict:
 
 
 def planner_prompts(run: RunRecord) -> tuple[str, str]:
-    planned = [s for s in run.steps if s.agent == "planner"]
+    # proposals: planner steps plus the benchmark start step (router, initial_chain, with a candidate)
+    planned = [s for s in run.steps if s.agent == "planner" or (s.agent == "router" and s.candidate is not None)]
     checked = [s for s in planned if s.report is not None]
     best = best_step(run)
     feedback = [s.why for s in run.steps if s.action == "human_feedback"]
