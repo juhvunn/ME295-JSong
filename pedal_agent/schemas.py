@@ -130,6 +130,7 @@ class Step(BaseModel):
     report: Optional[CheckReport] = None
     validation_errors: list[str] = Field(default_factory=list)   # candidate rejected, no sim used
     warnings: list[str] = Field(default_factory=list)            # e.g. E-series snapping, chain order
+    duplicate_of: Optional[int] = None  # Step.n of an identical, already checked candidate (sim skipped)
     llm: Optional[LLMUsage] = None
     at: datetime = Field(default_factory=now)
 
