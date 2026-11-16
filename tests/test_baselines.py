@@ -18,6 +18,7 @@ def decisions(planner, n):
     return [planner.generate("planner", "", "", PlannerDecision)[0] for _ in range(n)]
 
 
+@pytest.mark.slow
 def test_samples_follow_the_rules():
     rng = random.Random(1)
     seen_blocks, seen_lengths = set(), set()
@@ -76,6 +77,7 @@ def run(tmp_path, planner, mode, start):
     return agent.store.load(r.run_id)
 
 
+@pytest.mark.slow
 def test_random_catalog_run(tmp_path):
     rec = run(tmp_path, RandomCatalogPlanner(11, ["od_ts808"]), "random_catalog", ["od_ts808"])
     assert (rec.mode, rec.model_id, rec.seed, rec.stop_reason, rec.sims_used) == ("random_catalog", "none", 11, "budget", 12)
@@ -83,12 +85,14 @@ def test_random_catalog_run(tmp_path):
     assert rec.topology_changes > 0 and all(not s.validation_errors for s in rec.steps)
 
 
+@pytest.mark.slow
 def test_random_fixed_topology_run(tmp_path):
     rec = run(tmp_path, RandomFixedTopologyPlanner(11, ["od_ts808"]), "random_fixed_topology", ["od_ts808"])
     assert rec.sims_used == 12 and rec.topology_changes == 0
     assert all([b.block_id for b in s.candidate.chain] == ["od_ts808"] for s in rec.steps if s.report)
 
 
+@pytest.mark.slow
 def test_oracle_run_starts_on_its_own_chain(tmp_path):
     chain = ["fuzz_ff_si", "od_ts808"]
     rec = run(tmp_path, RandomFixedTopologyPlanner(11, chain), "random_fixed_topology_oracle", chain)
@@ -96,6 +100,7 @@ def test_oracle_run_starts_on_its_own_chain(tmp_path):
     assert all([b.block_id for b in s.candidate.chain] == chain for s in rec.steps if s.report)
 
 
+@pytest.mark.slow
 def test_runs_are_reproducible(tmp_path):
     a = run(tmp_path / "a", RandomCatalogPlanner(4, ["od_ts808"]), "random_catalog", ["od_ts808"])
     b = run(tmp_path / "b", RandomCatalogPlanner(4, ["od_ts808"]), "random_catalog", ["od_ts808"])

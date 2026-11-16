@@ -55,6 +55,7 @@ def test_all_pass_at_the_start_stops_without_planning(tmp_path):
     assert pending["kind"] == "feedback"
 
 
+@pytest.mark.slow
 def test_no_stall_or_duplicate_stop_full_budget_used(tmp_path):
     # two duplicates of the start (drive 0.5 = default) in a row, then 11 distinct non-improving settings
     plan = drive(0.5, 0.5) + drive(0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.55, 0.6)
@@ -70,6 +71,7 @@ def test_planner_call_cap_still_applies(tmp_path):
     assert sum(s.agent == "planner" for s in run.steps) == 24     # 2 x sim budget
 
 
+@pytest.mark.slow
 def test_baseline_fixed_topology_is_locked_to_the_start_chain(tmp_path):
     plan = [_decision("initial_chain", [("dist_distplus", {})], "my own start")] + drive(0.7)
     run, llm, _ = run_bench(tmp_path, plan + drive(*[0.1 * k for k in range(1, 10)]), mode="baseline_fixed_topology")
