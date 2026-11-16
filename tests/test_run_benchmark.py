@@ -74,6 +74,20 @@ def test_cumulative_success_and_tables():
     assert "| A | 75 % (3/4) |" in table
 
 
+def test_defaults_flag_file_and_c_split():
+    flags = yaml.safe_load((REPO_ROOT / "benchmarks" / "v1_solutions_analysis.yaml").read_text(encoding="utf-8"))["targets"]
+    assert set(flags) == {t["id"] for t in TARGETS if t["source"] == "generated" and t["category"] != "D"}
+    dp = {tid: v["passes_at_defaults"] for tid, v in flags.items()}
+    R = lambda tid, mode, ok: SimpleNamespace(  # noqa: E731
+        benchmark=SimpleNamespace(target_id=tid, category="C"), mode=mode, stop_reason="all_pass" if ok else "budget")
+    yes = next(t for t, v in dp.items() if v and flags[t]["category"] == "C")
+    no = next(t for t, v in dp.items() if not v and flags[t]["category"] == "C")
+    runs = [R(yes, "random_catalog", True), R(yes, "random_catalog", False), R(no, "random_catalog", False)]
+    table = "\n".join(summarize_benchmark.c_split_table("t", runs, ["random_catalog"], dp))
+    assert f"| chain at defaults passes ({yes}) | 50 % (1/2) |" in table
+    assert f"| needs tuning ({no}) | 0 % (0/1) |" in table
+
+
 @pytest.mark.slow
 def test_runner_writes_records_resumes_and_summarizes(tmp_path):
     for m, extra in (("random_catalog", []), ("random_fixed_topology_oracle", []), ("agent", ["--llm", "fake"])):

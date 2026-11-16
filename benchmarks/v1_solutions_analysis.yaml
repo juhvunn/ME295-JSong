@@ -1,0 +1,108 @@
+# ANALYSIS ONLY (derived from the hidden solutions): no planner, baseline or runner may read this.
+# passes_at_defaults: the solution's chain at default settings already passes the target.
+version: v1
+targets:
+  G01:
+    chain: dist_distplus
+    category: A
+    passes_at_defaults: false
+  G02:
+    chain: od_ts808
+    category: A
+    passes_at_defaults: false
+  G03:
+    chain: dist_distplus
+    category: A
+    passes_at_defaults: false
+  G04:
+    chain: od_ts808
+    category: A
+    passes_at_defaults: false
+  G05:
+    chain: dist_distplus
+    category: A
+    passes_at_defaults: false
+  G06:
+    chain: od_ts808
+    category: A
+    passes_at_defaults: false
+  G07:
+    chain: dist_distplus -> od_ts808
+    category: A
+    passes_at_defaults: false
+  G08:
+    chain: dist_distplus -> od_ts808
+    category: B
+    passes_at_defaults: false
+  G09:
+    chain: dist_distplus
+    category: B
+    passes_at_defaults: false
+  G10:
+    chain: dist_distplus
+    category: B
+    passes_at_defaults: false
+  G11:
+    chain: od_ts808 -> dist_distplus
+    category: B
+    passes_at_defaults: false
+  G12:
+    chain: od_ts808 -> dist_distplus
+    category: B
+    passes_at_defaults: false
+  G13:
+    chain: dist_distplus -> od_ts808
+    category: B
+    passes_at_defaults: false
+  G14:
+    chain: dist_distplus
+    category: B
+    passes_at_defaults: false
+  G15:
+    chain: dist_distplus
+    category: B
+    passes_at_defaults: false
+  G16:
+    chain: dist_distplus
+    category: B
+    passes_at_defaults: false
+  G17:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: true
+  G18:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: false
+  G19:
+    chain: dist_distplus -> od_ts808
+    category: C
+    passes_at_defaults: false
+  G20:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: false
+  G21:
+    chain: dist_distplus -> od_ts808
+    category: C
+    passes_at_defaults: false
+  G22:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: false
+  G23:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: true
+  G24:
+    chain: dist_distplus -> od_ts808
+    category: C
+    passes_at_defaults: false
+  G25:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: false
+  G26:
+    chain: od_ts808 -> dist_distplus
+    category: C
+    passes_at_defaults: true

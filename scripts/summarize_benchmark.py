@@ -90,6 +90,23 @@ def success_table(title, groups, methods):
     return L + [""]
 
 
+def c_split_table(title, runs, methods, defaults_pass):
+    """C targets split by the analysis flag: the solution's chain at defaults already passes or not."""
+    L = [f"## {title}", "", "C targets split by whether the solution's chain at its default settings already "
+         "passes (analysis flag from `scripts/flag_defaults.py`).", "",
+         "| C targets | " + " | ".join(SHORT[m] for m in methods) + " |", "|---|" + "---|" * len(methods)]
+    c_runs = [r for r in runs if r.benchmark.category == "C" and r.benchmark.target_id in defaults_pass]
+    for flag, label in ((True, "chain at defaults passes"), (False, "needs tuning")):
+        ids = sorted({t for t, v in defaults_pass.items() if v is flag} & {r.benchmark.target_id for r in c_runs})
+        cells = []
+        for m in methods:
+            rs = [r for r in c_runs if r.mode == m and defaults_pass[r.benchmark.target_id] is flag]
+            k = sum(map(success, rs))
+            cells.append(f"{100 * k / len(rs):.0f} % ({k}/{len(rs)})" if rs else "–")
+        L.append(f"| {label} ({', '.join(ids) or 'none'}) | " + " | ".join(cells) + " |")
+    return L + [""]
+
+
 def details_table(title, groups, methods):
     L = [f"## {title}", "",
          "| Method | Group | Runs | Success | Median sims to success | Median best score | Mean topology changes | "
@@ -157,6 +174,10 @@ def main(argv=None) -> int:
     source = {t["id"]: t["source"] for t in targets}
     subset_file = B / f"{args.version}_subset.yaml"
     subset = set(yaml.safe_load(subset_file.read_text(encoding="utf-8"))["targets"]) if subset_file.exists() else set()
+    flag_file = B / f"{args.version}_solutions_analysis.yaml"       # analysis only (scripts/flag_defaults.py)
+    defaults_pass = ({tid: v["passes_at_defaults"] for tid, v in
+                      yaml.safe_load(flag_file.read_text(encoding="utf-8"))["targets"].items()}
+                     if flag_file.exists() else {})
     runs = [r for r in load_runs(args.root) if r.benchmark.set == args.version]
     methods = [m for m in METHODS if any(r.mode == m for r in runs)]
     budget = max((r.sim_budget for r in runs), default=12)
@@ -170,13 +191,20 @@ def main(argv=None) -> int:
     if subset:
         L += success_table(f"Subset view ({len(subset)} targets: {', '.join(sorted(subset))}); random methods "
                            "filtered from their full-set runs", sub, methods)
+    if defaults_pass:
+        L += c_split_table("C split (full set)", runs, methods, defaults_pass)
+        if subset:
+            L += c_split_table("C split (subset)", [r for r in runs if r.benchmark.target_id in subset], methods,
+                               defaults_pass)
     L += details_table("Details (full set)", full, methods)
 
     per = defaultdict(dict)
     for r in runs:
         per[r.benchmark.target_id].setdefault(r.mode, []).append(r)
     L += ["## Per target (successes / runs; median sims to success)", "",
-          "| Target | Cat. | Subset | " + " | ".join(SHORT[m] for m in methods) + " |", "|---|---|---|" + "---|" * len(methods)]
+          "Defaults pass = the solution's chain at default settings already passes (analysis flag).", "",
+          "| Target | Cat. | Subset | Defaults pass | " + " | ".join(SHORT[m] for m in methods) + " |",
+          "|---|---|---|---|" + "---|" * len(methods)]
     rows = []
     for t in targets:
         if t["id"] not in per:
@@ -187,8 +215,9 @@ def main(argv=None) -> int:
             ok = [r.sims_used for r in rs if success(r)]
             cells.append(f"{len(ok)}/{len(rs)} ({fmt(median(ok))})" if rs else "–")
             rows.append({"target": t["id"], "category": t["category"], "source": t["source"], "subset": t["id"] in subset,
-                         "method": m, "runs": len(rs), "successes": len(ok), "median_sims_to_success": median(ok)})
-        L.append(f"| {t['id']} | {t['category']} | {'✓' if t['id'] in subset else ''} | " + " | ".join(cells) + " |")
+                         "defaults_pass": defaults_pass.get(t["id"]), "method": m, "runs": len(rs), "successes": len(ok), "median_sims_to_success": median(ok)})
+        dp = {True: "yes", False: "no"}.get(defaults_pass.get(t["id"]), "–")
+        L.append(f"| {t['id']} | {t['category']} | {'✓' if t['id'] in subset else ''} | {dp} | " + " | ".join(cells) + " |")
     (out / "summary.md").write_text("\n".join(L) + "\n", encoding="utf-8", newline="\n")
 
     with (out / "per_target.csv").open("w", newline="", encoding="utf-8") as f:

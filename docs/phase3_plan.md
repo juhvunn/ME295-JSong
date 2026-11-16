@@ -268,6 +268,13 @@ for all six, at the outside), on top of the roughly 1 hour for the generated set
    Their best-chain hit rates range from 1 % (H2, clean boost) to 52 % (H3), and in the baseline
    check (20 seeds) H2 was solved 0–1 times per method while H4 was solved 19 times by
    `random_fixed_topology`. Hand-target results are reported per target, not only pooled.
+8. **Some C targets are solved by the right chain at its defaults.** In v1, 3 of 10 C targets (G17,
+   G23, G26; all `od_ts808 → dist_distplus`) pass with the solution's chain at default settings, so
+   for them choosing the chain is the whole task (≈ 30 % of oracle C runs succeed at simulation 1).
+   v1 is kept as is. An analysis-only flag per target (`scripts/flag_defaults.py` →
+   `benchmarks/v1_solutions_analysis.yaml`, derived from the hidden solutions and never read by any
+   method) lets the summary split C results into "chain at defaults passes" and "needs tuning", to
+   separate "picked the right chain" from "picked the chain and tuned it".
 
 ## 5. Order of work
 
