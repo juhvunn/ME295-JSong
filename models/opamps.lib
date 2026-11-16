@@ -1,0 +1,59 @@
+* =====================================================================
+* Behavioural op-amp macromodel (written for this repository; no vendor code).
+* Pins (our convention): inp inn vcc vee out
+* Values in the wrappers come from the manufacturers' datasheets; see
+* models/README.md for every value, its source page and the assumptions.
+*
+* Structure:
+*  - input: RIN between the inputs, IB bias current into each input
+*  - transconductance stage with a smooth current limit (tanh) into an
+*    integrator C||R referenced to mid-supply:
+*        GBW = GM/(2*pi*C),  AOL = GM*R,  SR = IMAX/C
+*    (the tanh input range IMAX/GM = SR/(2*pi*GBW) is ~50 mV, like a
+*    bipolar differential pair)
+*  - the integrator node is clamped by two sharp diodes to vcc-VDROP and
+*    vee+VDROP (anti-windup), buffered, then ROUT in series with the output
+* Not modelled: offset, input common-mode limits, noise, supply current,
+* second poles, temperature.
+* =====================================================================
+.subckt OPAMP_MACRO inp inn vcc vee out
++ params: AOL=1e5 GBW=3e6 SR=1e6 VDROP=1.9 ROUT=50 IB=25n RIN=5Meg
+.param CC=1n
+.param GM={2*3.14159265358979*GBW*CC}
+.param RG={AOL/GM}
+.param IMAX={SR*CC}
+Rin  inp inn {RIN}
+Ibp  inp vee {IB}
+Ibn  inn vee {IB}
+Bmid mid 0 V = (V(vcc)+V(vee))/2
+Bgm  mid g I = {IMAX}*tanh({GM}*(V(inp)-V(inn))/{IMAX})
+Cc   g mid {CC}
+Rg   g mid {RG}
+* anti-windup / output limit: sharp diode clamps to the rails minus VDROP
+Bhi  hi 0 V = V(vcc)-{VDROP}
+Blo  lo 0 V = V(vee)+{VDROP}
+Dhi  g hi DCLAMP
+Dlo  lo g DCLAMP
+.model DCLAMP D(Is=1e-15 N=0.1)
+Bout o 0 V = V(g)
+Rout o out {ROUT}
+.ends OPAMP_MACRO
+
+* NJM4558 (one half), Nisshinbo NJM4558 datasheet Ver. 20260723:
+*   AV 100 dB, GB 3 MHz, SR 1 V/us, IB 25 nA, RIN 5 MOhm (p.2);
+*   swing 2 V from each rail at RL=2k, constant vs supply (p.2 table, p.4 graph).
+*   ROUT 50 Ohm is an assumption (not in the datasheet); VDROP is set so that
+*   the lowest graph point is met: +-6 V supply, RL=2k -> +-4.0 V (1.9 + 50*2 mA = 2.0 V)
+.subckt JRC4558_HALF inp inn vcc vee out
+X1 inp inn vcc vee out OPAMP_MACRO AOL=1e5 GBW=3e6 SR=1e6 VDROP=1.9 ROUT=50 IB=25n RIN=5Meg
+.ends JRC4558_HALF
+
+* LM741, TI datasheet SNOSC25D (rev. Oct 2015):
+*   AVOL 200 V/mV, SR 0.5 V/us, IB 80 nA, ri 2 MOhm, swing +-13 V at RL>=2k (p.5);
+*   GBW 1.17 MHz = 0.35 / rise time 0.3 us (p.5), formula from p.6 note (2).
+*   No swing-vs-supply graph: constant headroom assumed. ROUT 50 Ohm assumed; VDROP set
+*   so that +-15 V, RL=2k -> +-13 V (1.675 + 50*6.5 mA = 2.0 V).
+*   Note: recommended supply is +-10 V minimum (p.4); a 9 V pedal is outside that range.
+.subckt LM741 inp inn vcc vee out
+X1 inp inn vcc vee out OPAMP_MACRO AOL=2e5 GBW=1.17e6 SR=0.5e6 VDROP=1.675 ROUT=50 IB=80n RIN=2Meg
+.ends LM741
