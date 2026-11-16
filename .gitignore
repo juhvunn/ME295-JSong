@@ -2,7 +2,8 @@
 runs/*
 !runs/example-*.json
 logs/*.log
-results/              # generated plots and schematics (scripts/plot_results.py, draw_schematic.py)
+# generated plots and schematics (scripts/plot_results.py, scripts/draw_schematic.py)
+results/
 *.raw
 __pycache__/
 .venv/
