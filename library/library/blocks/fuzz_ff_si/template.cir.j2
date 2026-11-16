@@ -1,0 +1,32 @@
+* =====================================================================
+* fuzz_ff_si : Fuzz block, based on GGG Fuzz Face (Silicon Transistor Version)
+* Reference: GGG schematic, version 2011Dec09 (silicon NPN, negative ground).
+*   The FF5 layout (2014Nov19) is the GERMANIUM version with different values
+*   (R4 470, R5 1k + 10k trimmer) and is NOT used here.
+* Excluded: bypass switching (Sw1), LED indicator (D4, R11), optional D3/C6.
+* Ports: in out vcc gnd   (no Vcc/2 reference in this circuit)
+* =====================================================================
+.subckt fuzz_ff_si in out vcc gnd
+
+* --- Q1: common-emitter input stage ---------------------------------
+C1   in  b1   {{ C1 }}
+Q1   c1  b1  gnd {{ Q_model }}
+R2   vcc c1   33k
+
+* --- Q2: direct-coupled second stage --------------------------------
+Q2   c2  c1  e2  {{ Q_model }}
+R4   vcc na   330
+R5   na  c2   {{ R5 }}           ; collector load, sets Q2 bias point
+R3   e2  b1   100k               ; DC/AC feedback, sets bias of both stages
+
+* --- Fuzz: emitter pot with bypass cap on the wiper -----------------
+R6A  e2  w    {{ R6A }}          ; Fuzz (1k linear), emitter to wiper
+R6B  w   gnd  {{ R6B }}          ; Fuzz (1k linear), wiper to ground
+C2   w   gnd  22u
+
+* --- Output (taken at R4/R5 junction) + volume ----------------------
+C3   na  v1   10n
+R10A out gnd  {{ R10A }}         ; Volume (500k log), wiper to ground
+R10B v1  out  {{ R10B }}         ; Volume (500k log), top to wiper
+
+.ends fuzz_ff_si

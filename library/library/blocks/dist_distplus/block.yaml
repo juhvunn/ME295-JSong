@@ -1,0 +1,46 @@
+id: dist_distplus
+category: distortion
+name: "MXR Distortion Plus (GGG DIST2)"
+character: >
+  Hard clipping: diodes from the output to ground after a high-gain op-amp stage.
+  No tone control. The gain-leg high-pass moves with the Gain knob (bass thins out
+  as gain rises; ~720 Hz at max gain). Only ~15.9 kHz low-pass after clipping, so
+  brighter and rawer than a Tube Screamer. No output buffer: output impedance is
+  high and depends on the Level knob, so the next block loads it.
+source:
+  schematic: "GGG MXR Distortion Plus schematic, version 2012Jan27"
+  layout: "GGG DIST2 parts layout, version 2020Feb10"
+  url: "https://generalguitargadgets.com/how-to-build-it/technical-help/schematics/"
+  note: >
+    Designators follow the schematic. Layout differs (4k7 = R4, clipping diodes =
+    D3/D5 1N914). GGG uses silicon diodes; the original MXR used 1N270 germanium
+    (D_clip = ge). Level is 100k log per the 2020 layout (schematic: 50k log;
+    original MXR: 10k). Do not redistribute GGG PDFs; link only.
+template: template.cir.j2
+subckt: dist_distplus
+ports: [in, out, vcc, gnd]
+supply_v: 9.0
+
+models:
+  opamp_model: LM741          # wrapper pins: inp inn vcc vee out; slew rate matters here
+  diode_si_model: D1N914      # 1N4148 is electrically equivalent
+  diode_ge_model: DGE
+  diode_led_model: DLED_RED
+
+params:
+  gain:   {type: pot, designator: R7, r_total: 500k, taper: log, invert: true, mode: rheostat, default: 0.5,
+           note: "reverse log; 1 = R7 -> 0 = max gain (~46.5 dB), 0 = min gain (~9.5 dB)"}
+  level:  {type: pot, designator: R10, r_total: 100k, taper: log, mode: divider, default: 0.5}
+  D_clip: {type: choice, designators: [D1, D2], choices: [si, ge, led, none], default: si,
+           note: "si = GGG default (1N4148/1N914), ge = original MXR (1N270), led, none"}
+  C4:     {type: component, value: 47n, min: 22n, max: 220n, series: E6,
+           note: "gain-leg high-pass; fc = 1/(2*pi*(4.7k+R7)*C4), ~720 Hz at max gain"}
+  C7:     {type: component, value: 1n, min: 470p, max: 10n, series: E6,
+           note: "post-clip low-pass with R9 10k; ~15.9 kHz at 1n"}
+
+typical_metrics: {}
+
+dc_checks:
+  vr: {node: vr, expect: [4.3, 4.7]}
+  o:  {node: o,  expect: [4.0, 5.0]}
+  c:  {node: c,  expect: [-0.05, 0.05]}
