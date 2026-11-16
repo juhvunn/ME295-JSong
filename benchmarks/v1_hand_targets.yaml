@@ -1,0 +1,39 @@
+# Hand-written, musically motivated benchmark targets for set v1 (docs/phase3_plan.md, section 4b (b)).
+# Written and approved 2026-11-16, and committed BEFORE any search ran on them.
+# NEVER edit after results are seen: any change means a new benchmark version.
+# Classified by scripts/make_benchmarks.py with the same A-D evidence rules as the generated targets.
+version: v1
+targets:
+  - id: H1
+    idea: "rougher than a TS-808, less than a fuzz"
+    targets:
+      - {name: thd_pct, lo: 15.0, hi: 30.0, unit: "%", label: "THD (300 mV)"}
+      - {name: gain_1k_db, lo: 10.0, unit: dB, label: "Gain at 1 kHz"}
+      - {name: ac_peak_hz, lo: 600.0, hi: 1200.0, unit: Hz, label: "Response peak"}
+  - id: H2
+    idea: "clean boost"
+    note: "may well be unreachable with this library at the 300 mV test level; kept as a valid finding"
+    targets:
+      - {name: thd_pct, hi: 2.0, unit: "%", label: "THD (300 mV)"}
+      - {name: gain_1k_db, lo: 12.0, unit: dB, label: "Gain at 1 kHz"}
+  - id: H3
+    idea: "bright, raw distortion"
+    targets:
+      - {name: thd_pct, lo: 25.0, unit: "%", label: "THD (300 mV)"}
+      - {name: ac_peak_hz, lo: 2000.0, unit: Hz, label: "Response peak"}
+  - id: H4
+    idea: "dark, smooth overdrive"
+    targets:
+      - {name: thd_pct, lo: 3.0, hi: 10.0, unit: "%", label: "THD (300 mV)"}
+      - {name: ac_peak_hz, hi: 700.0, unit: Hz, label: "Response peak"}
+  - id: H5
+    idea: "asymmetric, gated fuzz"
+    targets:
+      - {name: even_odd, lo: 0.8, unit: "", label: "Even/odd harmonics"}
+      - {name: thd_pct, lo: 30.0, unit: "%", label: "THD (300 mV)"}
+  - id: H6
+    idea: "fuzz into overdrive, mid-forward"
+    targets:
+      - {name: even_odd, lo: 0.3, unit: "", label: "Even/odd harmonics"}
+      - {name: thd_pct, lo: 15.0, unit: "%", label: "THD (300 mV)"}
+      - {name: ac_peak_hz, lo: 500.0, hi: 1200.0, unit: Hz, label: "Response peak"}

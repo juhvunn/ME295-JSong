@@ -15,7 +15,8 @@ enforces this.
 **Generation** (`scripts/make_benchmarks.py --version v1 --seed <S>`, deterministic):
 1. **Draw a random design** from the catalog, using validated choices only (`D_clip=ge` excluded):
    - Chain of 1 or 2 blocks, no block twice; `fuzz_ff_si` first if present (its `prefers_first`).
-   - Knobs uniform in [0.05, 0.95]; parts random E-series values within min/max; choices uniform.
+   - **Sampling distribution: the generator's own, different from the baselines' (section 4b (a)).**
+     Knobs arcsine over [0, 1], default choice 25 %, parts log-uniform then E-series snapped.
 2. **Simulate it with the real model set.** Keep it only if all DC checks pass and there are no errors.
 3. **Pick 3–4 metrics and set ranges around the measured values,** so the drawn design is a known solution.
    **Use only metrics that actually vary on the solution's chain.** For each chain, 30 random
@@ -152,6 +153,70 @@ run exists.
   table exists for every chain used).
 - **Runner end to end with `agent:fake`** plus both baselines, on 2 targets × 1 repeat: RunRecords
   validate, and the summary table has the expected rows and columns.
+
+## 4b. Fairness: generator vs random baselines (proposal, 2026-11-16)
+
+**Problem.** If the generator draws solutions from the same distribution the random baselines
+search, the benchmark is tailored to them: targets are made exactly the way they search.
+
+**Decision (approved 2026-11-16): do both (a) and (b).**
+
+**(a) Generate solutions from a different distribution than the baselines search.**
+
+| | Random baselines (unchanged) | Benchmark generator (new) |
+|---|---|---|
+| Knobs | uniform in [0.05, 0.95] | **full [0, 1], arcsine (Beta(0.5, 0.5)) distribution**: more weight near the ends, where real settings often sit (drive full up, tone down). About 29 % of generator knob values fall outside the baselines' range. |
+| Choices (D_clip, Q_model) | uniform over validated choices | **default choice 25 %**, the other validated choices share 75 % (e.g. od_ts808: si 25 %, led 37.5 %, none 37.5 %) |
+| Parts (E-series) | uniform over the E-series values in range | log-uniform over [min, max], then snapped to the E-series |
+| Chain | 1–2 blocks, uniform | set by the category quotas (A/B single block, C 2-block) |
+
+The **classification samples** (100 per start chain, 100 per single block, 500 catalog) use the
+generator's wider distribution. So "0 of 100 pass" is evidence against a broader search than the
+baselines run.
+
+**(b) Add 6 hand-written, musically motivated targets.** They are numeric specs, written down and
+committed **before** any search on them, and classified with the same A–D evidence rules. Their
+solutions are unknown in advance, so the evidence order is:
+- **A:** a start-chain sample passes.
+- **B:** a sample of another single block passes, and the start chain fails.
+- **C:** all single blocks fail, and a sample from 300 random 2-block chains passes.
+- **D:** none of 500 catalog samples pass.
+
+The solution found is stored like the generated ones. Approved targets (numbers are musical
+judgment, approved 2026-11-16 with H5 raised from ≥ 0.5 to ≥ 0.8, because the fuzz default already
+gives about 0.58). They are stored in `benchmarks/v1_hand_targets.yaml` and **committed before any
+search runs on them. They are never changed after results are seen; any change means a new version.**
+
+| Id | Idea | Targets |
+|---|---|---|
+| H1 | rougher than a TS-808, less than a fuzz | thd_pct 15–30, gain_1k_db ≥ 10, ac_peak_hz 600–1200 |
+| H2 | clean boost | thd_pct ≤ 2, gain_1k_db ≥ 12 |
+| H3 | bright, raw distortion | thd_pct ≥ 25, ac_peak_hz ≥ 2000 |
+| H4 | dark, smooth overdrive | thd_pct 3–10, ac_peak_hz ≤ 700 |
+| H5 | asymmetric, gated fuzz | even_odd ≥ 0.8, thd_pct ≥ 30 |
+| H6 | fuzz into overdrive, mid-forward | even_odd ≥ 0.3, thd_pct ≥ 15, ac_peak_hz 500–1200 |
+
+**Note on H2:** a clean boost may well be **unreachable** with this library at the 300 mV test
+level. Every block clips at that level, and none has a clean-boost mode with enough headroom. It is
+kept anyway: "no clean boost in the library" is a valid finding (it would land in category D).
+
+**Size and cost.** The set becomes 30 generated targets (A 7, B 9, C 10, D 4) **+ 6 hand-written** = 36.
+Hand-written targets are reported **both within their A–D category and separately** (field
+`source: generated | hand`). Their classification costs at most about 1100 simulations each (about 1 h
+for all six, at the outside), on top of the roughly 1 hour for the generated set.
+
+**Remaining bias (limitations to state in Phase 3 results).**
+1. **Same design space.** Solutions still come from the catalog `random_catalog` searches. The
+   distribution mismatch reduces its advantage but does not remove it.
+2. **Categories are defined by random sampling of the start chain.** B and C are, by construction,
+   targets that 100 random start-chain samples miss, so `random_fixed_topology` (12 samples) is
+   *expected* to fail them. The informative comparisons on B/C are agent vs `random_catalog`, agent vs
+   `baseline_fixed_topology` (LLM), and all vs the oracle (upper bound).
+3. **Generated targets are "random-design-shaped":** combinations of metric windows a random design
+   happens to produce, not necessarily musically meaningful. The hand-written targets address this,
+   but they are few and reflect one person's judgment.
+4. **Same tolerance windows and metric definitions for all methods,** measured with fitted models;
+   `fuzz_ff_si` results carry the sensitivity ranges in `models/README.md`.
 
 ## 5. Order of work
 
