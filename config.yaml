@@ -25,4 +25,3 @@ paths:
   logs_dir: "logs"
 
 protocol: "protocol/protocol_v1.yaml"
-targets: "targets/targets_v1.yaml"
