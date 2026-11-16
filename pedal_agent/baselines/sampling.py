@@ -44,3 +44,35 @@ def sample_chain(rng: random.Random, max_len: int = MAX_CHAIN) -> list[str]:
 def sample_design(rng: random.Random, chain: list[str] | None = None) -> list[tuple[str, dict]]:
     """[(block_id, params)]; random chain unless one is given."""
     return [(b, sample_params(b, rng)) for b in (chain or sample_chain(rng))]
+
+
+# ---------- benchmark generator distribution (docs/phase3_plan.md 4b (a)): deliberately different ----------
+GEN_DEFAULT_CHOICE_P = 0.25
+
+
+def generator_params(block_id: str, rng: random.Random) -> dict:
+    """Knobs arcsine (Beta(0.5, 0.5)) over [0, 1]; default choice 25 %, the other validated choices
+    share 75 %; parts log-uniform over [min, max] snapped to their E-series."""
+    import math
+
+    from pedal_agent.validate import snap
+
+    _, meta = load_block(block_id)
+    params = {}
+    for name in sorted(meta["params"]):
+        spec = meta["params"][name]
+        if spec["type"] == "pot":
+            params[name] = round(rng.betavariate(0.5, 0.5), 3)
+        elif spec["type"] == "choice":
+            allowed = allowed_choices(spec, allow_unvalidated=False)
+            others = [c for c in allowed if c != spec["default"]]
+            params[name] = spec["default"] if (not others or rng.random() < GEN_DEFAULT_CHOICE_P) else rng.choice(others)
+        else:
+            lo, hi = parse_value(spec["min"]), parse_value(spec["max"])
+            x = math.exp(rng.uniform(math.log(lo), math.log(hi)))
+            params[name] = snap(x, spec["series"], lo, hi) if spec.get("series") else float(f"{x:.6g}")
+    return params
+
+
+def generator_design(rng: random.Random, chain: list[str]) -> list[tuple[str, dict]]:
+    return [(b, generator_params(b, rng)) for b in chain]

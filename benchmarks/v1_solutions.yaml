@@ -1,0 +1,886 @@
+# HIDDEN SOLUTIONS: for analysis only. No planner, baseline or runner may read this file
+# (except random_fixed_topology_oracle, which reads only the chain).
+G01:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 3.3e-08
+      C7: 1.0e-09
+      D_clip: led
+      gain: 0.667
+      level: 0.714
+  metrics:
+    gain_1k_db: 20.882264278364648
+    ac_peak_db: 32.8047551
+    ac_peak_hz: 2636.51348
+    thd_pct: 39.6484272264378
+    even_odd: 0.07295655429754944
+    out_pk_v: 0.4210527683592102
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    hits: 14
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G02:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 3.3e-08
+      C4: 7.5e-11
+      D_clip: led
+      drive: 0.089
+      level: 0.629
+      tone: 0.514
+  metrics:
+    gain_1k_db: 9.235800231423386
+    ac_peak_db: 9.61831554
+    ac_peak_hz: 4375.52325
+    thd_pct: 6.416663653886905
+    even_odd: 0.06791816375293153
+    out_pk_v: 0.6516318608125894
+  calibration:
+    factor: 3.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.008
+    hits: 13
+    draws: 250
+    capped: false
+    chain: od_ts808
+G03:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 6.8e-08
+      C7: 2.2e-09
+      D_clip: si
+      gain: 0.017
+      level: 0.871
+  metrics:
+    gain_1k_db: 4.8791501234906685
+    ac_peak_db: 16.5364924
+    ac_peak_hz: 2636.51348
+    thd_pct: 18.560919959880252
+    even_odd: 0.0021731029442832225
+    out_pk_v: 0.2566331595598275
+  calibration:
+    factor: 3.5
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    hits: 14
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G04:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 2.2e-08
+      C4: 4.7e-11
+      D_clip: led
+      drive: 0.81
+      level: 0.856
+      tone: 0.173
+  metrics:
+    gain_1k_db: 22.289232197090953
+    ac_peak_db: 24.6853428
+    ac_peak_hz: 4375.52325
+    thd_pct: 13.044765534025737
+    even_odd: 0.043931990043826474
+    out_pk_v: 0.8801895357844264
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    hits: 14
+    draws: 250
+    capped: false
+    chain: od_ts808
+G05:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 3.3e-08
+      C7: 4.7e-09
+      D_clip: none
+      gain: 0.187
+      level: 0.99
+  metrics:
+    gain_1k_db: 14.314140042829129
+    ac_peak_db: 24.9043372
+    ac_peak_hz: 2636.51348
+    thd_pct: 9.26072830186228e-05
+    even_odd: 5.7635263375856
+    out_pk_v: 1.5591645236586853
+  calibration:
+    factor: 3.5
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    hits: 15
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G06:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 1.0e-07
+      C4: 4.7e-11
+      D_clip: si
+      drive: 0.082
+      level: 0.99
+      tone: 0.328
+  metrics:
+    gain_1k_db: 15.896479892151898
+    ac_peak_db: 16.781348
+    ac_peak_hz: 576.806301
+    thd_pct: 8.063077018900668
+    even_odd: 0.03505925135318209
+    out_pk_v: 0.45983192122752686
+  calibration:
+    factor: 1.75
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    hits: 15
+    draws: 250
+    capped: false
+    chain: od_ts808
+G07:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 6.8e-08
+      C7: 1.0e-09
+      D_clip: led
+      gain: 0.308
+      level: 0.143
+  - block_id: od_ts808
+    params:
+      C3: 6.8e-08
+      C4: 1.5e-10
+      D_clip: none
+      drive: 0.999
+      level: 0.474
+      tone: 0.43
+  metrics:
+    gain_1k_db: 6.909711772307965
+    ac_peak_db: 9.58448328
+    ac_peak_hz: 2517.85082
+    thd_pct: 5.04661864313835
+    even_odd: 0.07681021870410609
+    out_pk_v: 0.4281603716929499
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    hits: 13
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G08:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 3.3e-08
+      C7: 6.8e-09
+      D_clip: led
+      gain: 0.559
+      level: 0.728
+  - block_id: od_ts808
+    params:
+      C3: 1.5e-07
+      C4: 2.7e-11
+      D_clip: led
+      drive: 0.906
+      level: 0.509
+      tone: 0.903
+  metrics:
+    gain_1k_db: 44.91630888148825
+    ac_peak_db: 48.3086168
+    ac_peak_hz: 2517.85082
+    thd_pct: 14.74692960556785
+    even_odd: 0.0959427120404701
+    out_pk_v: 0.8332890917700522
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    hits: 14
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G09:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 2.2e-09
+      D_clip: led
+      gain: 0.529
+      level: 0.444
+  metrics:
+    gain_1k_db: 4.4797780361870005
+    ac_peak_db: 16.0548276
+    ac_peak_hz: 2636.51348
+    thd_pct: 34.28111545170532
+    even_odd: 0.05432721353960155
+    out_pk_v: 0.11629677199354412
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    hits: 13
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G10:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 1.0e-07
+      C7: 1.5e-09
+      D_clip: led
+      gain: 0.81
+      level: 0.883
+  metrics:
+    gain_1k_db: 33.354003740321495
+    ac_peak_db: 44.8852283
+    ac_peak_hz: 2636.51348
+    thd_pct: 40.95406430125133
+    even_odd: 0.07135931942102222
+    out_pk_v: 0.9068014058324156
+  calibration:
+    factor: 3.5
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    hits: 13
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G11:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 4.7e-08
+      C4: 2.7e-11
+      D_clip: led
+      drive: 0.02
+      level: 0.988
+      tone: 0.908
+  - block_id: dist_distplus
+    params:
+      C4: 4.7e-08
+      C7: 6.8e-10
+      D_clip: si
+      gain: 0.238
+      level: 0.869
+  metrics:
+    gain_1k_db: 27.33732202516705
+    ac_peak_db: 27.3861824
+    ac_peak_hz: 873.031664
+    thd_pct: 40.465788981841484
+    even_odd: 0.09718819675994936
+    out_pk_v: 0.2972795285389403
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    hits: 14
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G12:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 6.8e-08
+      C4: 3.3e-11
+      D_clip: none
+      drive: 0.042
+      level: 0.569
+      tone: 0.774
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 2.2e-09
+      D_clip: none
+      gain: 0.727
+      level: 0.72
+  metrics:
+    gain_1k_db: 33.41896559360168
+    ac_peak_db: 33.9391574
+    ac_peak_hz: 693.473701
+    thd_pct: 37.22599609863191
+    even_odd: 0.06969386281218193
+    out_pk_v: 0.7361045628935868
+  calibration:
+    factor: 2.6
+    hit_rate: 0.064
+    hit_rate_factor_1: 0.024
+    hits: 16
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G13:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 3.3e-08
+      C7: 1.0e-09
+      D_clip: none
+      gain: 0.976
+      level: 0.628
+  - block_id: od_ts808
+    params:
+      C3: 1.0e-07
+      C4: 1.1e-10
+      D_clip: led
+      drive: 0.002
+      level: 0.207
+      tone: 0.87
+  metrics:
+    gain_1k_db: 32.11147740153883
+    ac_peak_db: 39.4547476
+    ac_peak_hz: 2517.85082
+    thd_pct: 15.153390149503789
+    even_odd: 0.08243706505217809
+    out_pk_v: 0.3400067972390407
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.008
+    hits: 13
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G14:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 1.0e-07
+      C7: 1.0e-09
+      D_clip: led
+      gain: 0.96
+      level: 0.424
+  metrics:
+    gain_1k_db: 21.354964334187144
+    ac_peak_db: 32.490148
+    ac_peak_hz: 2636.51348
+    thd_pct: 41.86703890646135
+    even_odd: 0.07255459757683339
+    out_pk_v: 0.1053150974968083
+  calibration:
+    factor: 2.3
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    hits: 14
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G15:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 2.2e-08
+      C7: 1.0e-09
+      D_clip: none
+      gain: 0.999
+      level: 0.777
+  metrics:
+    gain_1k_db: 33.379827585554686
+    ac_peak_db: 49.070673
+    ac_peak_hz: 2636.51348
+    thd_pct: 40.17173375862037
+    even_odd: 0.07797306688779657
+    out_pk_v: 0.954085629555611
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    hits: 13
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G16:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 4.7e-09
+      D_clip: none
+      gain: 0.791
+      level: 0.418
+  metrics:
+    gain_1k_db: 13.386767228562062
+    ac_peak_db: 23.655735
+    ac_peak_hz: 2636.51348
+    thd_pct: 29.008531564889807
+    even_odd: 0.059996729372063046
+    out_pk_v: 0.17314151052379406
+  calibration:
+    factor: 2.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    hits: 15
+    draws: 250
+    capped: false
+    chain: dist_distplus
+G17:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 4.7e-08
+      C4: 2.2e-10
+      D_clip: none
+      drive: 0.016
+      level: 0.033
+      tone: 0.29
+  - block_id: dist_distplus
+    params:
+      C4: 6.8e-08
+      C7: 6.8e-09
+      D_clip: led
+      gain: 0.903
+      level: 0.787
+  metrics:
+    gain_1k_db: 16.32777330618805
+    ac_peak_db: 16.4487217
+    ac_peak_hz: 873.031664
+    thd_pct: 27.43127787492919
+    even_odd: 0.07167164593965526
+    out_pk_v: 0.5840105390733816
+  calibration:
+    factor: 2.3
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    hits: 15
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G18:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 1.5e-07
+      C4: 6.2e-11
+      D_clip: led
+      drive: 0.669
+      level: 0.907
+      tone: 0.809
+  - block_id: dist_distplus
+    params:
+      C4: 4.7e-08
+      C7: 2.2e-09
+      D_clip: led
+      gain: 0.086
+      level: 0.897
+  metrics:
+    gain_1k_db: 32.54906498755906
+    ac_peak_db: 34.0639962
+    ac_peak_hz: 479.766584
+    thd_pct: 28.574326580490144
+    even_odd: 0.06305039278410239
+    out_pk_v: 0.9581057985655836
+  calibration:
+    factor: 2.6
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    hits: 14
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G19:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 2.2e-07
+      C7: 2.2e-09
+      D_clip: led
+      gain: 0.999
+      level: 1.0
+  - block_id: od_ts808
+    params:
+      C3: 2.2e-08
+      C4: 4.3e-11
+      D_clip: none
+      drive: 0.061
+      level: 0.202
+      tone: 0.839
+  metrics:
+    gain_1k_db: 44.87397357558444
+    ac_peak_db: 52.927295
+    ac_peak_hz: 2517.85082
+    thd_pct: 15.19179528341696
+    even_odd: 0.11103611805347648
+    out_pk_v: 0.4392180958458292
+  calibration:
+    factor: 4.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    hits: 15
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G20:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 4.7e-08
+      C4: 3.9e-11
+      D_clip: none
+      drive: 0.085
+      level: 0.417
+      tone: 0.741
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 4.7e-10
+      D_clip: led
+      gain: 1.0
+      level: 0.727
+  metrics:
+    gain_1k_db: 42.285229045150494
+    ac_peak_db: 42.3846359
+    ac_peak_hz: 873.031664
+    thd_pct: 42.44547185778485
+    even_odd: 0.06955735435878184
+    out_pk_v: 0.4522391353754742
+  calibration:
+    factor: 2.6
+    hit_rate: 0.072
+    hit_rate_factor_1: 0.0
+    hits: 18
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G21:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 1.0e-07
+      C7: 1.0e-08
+      D_clip: si
+      gain: 0.979
+      level: 0.442
+  - block_id: od_ts808
+    params:
+      C3: 6.8e-08
+      C4: 1.3e-10
+      D_clip: led
+      drive: 0.95
+      level: 0.928
+      tone: 0.004
+  metrics:
+    gain_1k_db: 48.87709095821794
+    ac_peak_db: 50.5996001
+    ac_peak_hz: 550.845741
+    thd_pct: 16.04386465947645
+    even_odd: 0.0650903746738344
+    out_pk_v: 0.5724475000177855
+  calibration:
+    factor: 3.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    hits: 15
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G22:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 1.5e-07
+      C4: 1.5e-10
+      D_clip: si
+      drive: 0.856
+      level: 0.075
+      tone: 0.861
+  - block_id: dist_distplus
+    params:
+      C4: 4.7e-08
+      C7: 3.3e-09
+      D_clip: none
+      gain: 0.997
+      level: 0.989
+  metrics:
+    gain_1k_db: 53.323680244161075
+    ac_peak_db: 53.4645717
+    ac_peak_hz: 873.031664
+    thd_pct: 26.71464417885052
+    even_odd: 0.08765007617214168
+    out_pk_v: 2.496554992276181
+  calibration:
+    factor: 3.5
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    hits: 13
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G23:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 3.3e-08
+      C4: 3.6e-11
+      D_clip: none
+      drive: 0.228
+      level: 0.358
+      tone: 0.886
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 3.3e-09
+      D_clip: si
+      gain: 0.313
+      level: 0.509
+  metrics:
+    gain_1k_db: 5.622037685844218
+    ac_peak_db: 5.62280694
+    ac_peak_hz: 1002.37447
+    thd_pct: 36.30525760616254
+    even_odd: 0.059064262275389516
+    out_pk_v: 0.05639996634177805
+  calibration:
+    factor: 3.5
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    hits: 14
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G24:
+  chain:
+  - block_id: dist_distplus
+    params:
+      C4: 2.2e-07
+      C7: 3.3e-09
+      D_clip: none
+      gain: 0.974
+      level: 0.736
+  - block_id: od_ts808
+    params:
+      C3: 2.2e-08
+      C4: 9.1e-11
+      D_clip: si
+      drive: 0.555
+      level: 0.677
+      tone: 0.077
+  metrics:
+    gain_1k_db: 45.75790740120068
+    ac_peak_db: 54.7676497
+    ac_peak_hz: 2517.85082
+    thd_pct: 13.69337447322977
+    even_odd: 0.08392992008611748
+    out_pk_v: 0.3775029528259815
+  calibration:
+    factor: 3.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    hits: 14
+    draws: 250
+    capped: false
+    chain: dist_distplus -> od_ts808
+G25:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 3.3e-08
+      C4: 3.3e-11
+      D_clip: si
+      drive: 0.327
+      level: 0.942
+      tone: 0.864
+  - block_id: dist_distplus
+    params:
+      C4: 1.5e-07
+      C7: 1.0e-09
+      D_clip: si
+      gain: 0.607
+      level: 0.532
+  metrics:
+    gain_1k_db: 27.08222195736235
+    ac_peak_db: 27.089085
+    ac_peak_hz: 1049.61492
+    thd_pct: 41.113828531471974
+    even_odd: 0.06505621474531727
+    out_pk_v: 0.06319559284034242
+  calibration:
+    factor: 2.3
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.012
+    hits: 14
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+G26:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 4.7e-08
+      C4: 5.6e-11
+      D_clip: led
+      drive: 0.982
+      level: 0.65
+      tone: 0.292
+  - block_id: dist_distplus
+    params:
+      C4: 1.0e-07
+      C7: 1.0e-08
+      D_clip: led
+      gain: 0.914
+      level: 0.728
+  metrics:
+    gain_1k_db: 58.552936887706956
+    ac_peak_db: 58.9338295
+    ac_peak_hz: 796.214341
+    thd_pct: 29.933805196223943
+    even_odd: 0.050974659862614645
+    out_pk_v: 0.446047756836036
+  calibration:
+    factor: 1.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.06
+    hits: 15
+    draws: 250
+    capped: false
+    chain: od_ts808 -> dist_distplus
+H1:
+  chain:
+  - block_id: od_ts808
+    params: &id001
+      C3: 1.0e-07
+      C4: 1.1e-10
+      D_clip: none
+      drive: 0.888
+      level: 0.989
+      tone: 0.898
+  metrics: &id002
+    gain_1k_db: 34.21518743123623
+    ac_peak_db: 35.1113337
+    ac_peak_hz: 632.455532
+    thd_pct: 22.96429739050173
+    even_odd: 1.0408138786129986
+    out_pk_v: 2.1526502187386654
+  hit_rates_by_chain:
+    dist_distplus: 0.0
+    fuzz_ff_si: 0.0
+    od_ts808: 0.036
+    dist_distplus -> od_ts808: 0.0
+    fuzz_ff_si -> dist_distplus: 0.004
+    fuzz_ff_si -> od_ts808: 0.028
+    od_ts808 -> dist_distplus: 0.064
+H2:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 2.2e-08
+      C4: 2.2e-11
+      D_clip: none
+      drive: 0.046
+      level: 0.952
+      tone: 0.829
+  metrics:
+    gain_1k_db: 12.31831667310414
+    ac_peak_db: 14.5774221
+    ac_peak_hz: 4375.52325
+    thd_pct: 1.2734312273818893
+    even_odd: 2.686330726514806
+    out_pk_v: 1.238436793550668
+  hit_rates_by_chain:
+    dist_distplus: 0.012
+    fuzz_ff_si: 0.0
+    od_ts808: 0.004
+    dist_distplus -> od_ts808: 0.0
+    fuzz_ff_si -> dist_distplus: 0.0
+    fuzz_ff_si -> od_ts808: 0.0
+    od_ts808 -> dist_distplus: 0.0
+H3:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 1.5e-07
+      C4: 1.5e-10
+      D_clip: none
+      drive: 0.75
+      level: 0.284
+      tone: 0.994
+  metrics:
+    gain_1k_db: 21.631177792504136
+    ac_peak_db: 22.027101
+    ac_peak_hz: 4178.59226
+    thd_pct: 28.45017364442006
+    even_odd: 0.047043786993413536
+    out_pk_v: 0.6653161666558111
+  hit_rates_by_chain:
+    dist_distplus: 0.524
+    fuzz_ff_si: 0.008
+    od_ts808: 0.008
+    dist_distplus -> od_ts808: 0.06
+    fuzz_ff_si -> dist_distplus: 0.0
+    fuzz_ff_si -> od_ts808: 0.0
+    od_ts808 -> dist_distplus: 0.048
+H4:
+  chain:
+  - block_id: od_ts808
+    params:
+      C3: 2.2e-07
+      C4: 2.4e-11
+      D_clip: led
+      drive: 0.081
+      level: 0.862
+      tone: 0.912
+  metrics:
+    gain_1k_db: 17.743472068008813
+    ac_peak_db: 19.053319
+    ac_peak_hz: 502.377286
+    thd_pct: 9.068853173795521
+    even_odd: 0.14554505839021475
+    out_pk_v: 1.2848490173216345
+  hit_rates_by_chain:
+    dist_distplus: 0.0
+    fuzz_ff_si: 0.0
+    od_ts808: 0.208
+    dist_distplus -> od_ts808: 0.02
+    fuzz_ff_si -> dist_distplus: 0.0
+    fuzz_ff_si -> od_ts808: 0.024
+    od_ts808 -> dist_distplus: 0.1
+H5:
+  chain:
+  - block_id: fuzz_ff_si
+    params:
+      C1: 6.8e-07
+      Q_model: QBC549C
+      R5: 6800.0
+      fuzz: 0.941
+      volume: 0.385
+  metrics:
+    gain_1k_db: 4.5542017550272025
+    ac_peak_db: 10.4276355
+    ac_peak_hz: 229.630724
+    thd_pct: 44.9559772220886
+    even_odd: 0.8272073072283643
+    out_pk_v: 0.011632496796504086
+  hit_rates_by_chain:
+    dist_distplus: 0.0
+    fuzz_ff_si: 0.428
+    od_ts808: 0.0
+    dist_distplus -> od_ts808: 0.0
+    fuzz_ff_si -> dist_distplus: 0.14
+    fuzz_ff_si -> od_ts808: 0.048
+    od_ts808 -> dist_distplus: 0.0
+H6:
+  chain:
+  - block_id: od_ts808
+    params: *id001
+  metrics: *id002
+  hit_rates_by_chain:
+    dist_distplus: 0.0
+    fuzz_ff_si: 0.016
+    od_ts808: 0.04
+    dist_distplus -> od_ts808: 0.0
+    fuzz_ff_si -> dist_distplus: 0.048
+    fuzz_ff_si -> od_ts808: 0.108
+    od_ts808 -> dist_distplus: 0.012

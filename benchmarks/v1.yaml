@@ -1,0 +1,1539 @@
+header:
+  version: v1
+  seed: 1116
+  git_commit: 0c9e96d94a35edc53436827500881f15091134bc
+  generated_at: '2026-11-16T18:10:01+00:00'
+  model_files:
+  - path: models/opamps.lib
+    sha256: 385958e12a80ec29ea0392ed70ee3ad3ff1472e8cb7c18859b61e96868ed9e5a
+    status: validated
+  - path: models/diodes_fitted.lib
+    sha256: 06dade94cbf2fa2a935ac122350703b9223eaef8d7d35dd5f9b83c6de6fb8ec6
+    status: validated
+  - path: models/bjts_fitted.lib
+    sha256: b1458826f0eefa959e540684c7318ff22ee47a6c714ee6d2c7c699f424be4997
+    status: validated
+  start_chain:
+  - od_ts808
+  rules:
+    draws_per_chain: 250
+    quotas:
+      A: 7
+      B: 9
+      C: 10
+      D: 4
+    base_windows: gain/ac_peak_db +-1.5 dB; thd/ac_peak_hz x/1.25; out_pk x/1.2; even_odd
+      x/1.5 (>= +-0.02); calibration multiplies the half-width (dB, even_odd) or the
+      exponent
+    calibration: smallest factor in [1.0, 1.15, 1.3, 1.5, 1.75, 2.0, 2.3, 2.6, 3.0,
+      3.5, 4.0] with hit rate (passes / draws on the solution's chain, generator distribution)
+      >= 0.05; capped at 4.0; a target still below at the cap is discarded and redrawn
+    floors: solution out_pk_v >= 0.05 V; thd_pct used only if THD >= 0.0013 % (10
+      x measured floor 0.00013 %); even_odd only if THD >= 1.0 %
+    eligibility: 10-90 % spread over playable pool (meaningful values) >= 2 x base
+      window width
+    sampling: 'generator distribution (sampling.generator_params): knobs Beta(0.5,0.5)
+      on [0,1], default choice 25 %, parts log-uniform snapped to E-series; validated
+      choices only'
+  stats:
+    attempts: 544
+    dc_or_sim_failure: 107
+    too_quiet: 218
+    too_few_eligible_metrics: 0
+    calibration_capped: 132
+    excluded_default_passes: 2
+    self_check_failed: 0
+    category_full: 59
+    pool_valid:
+      dist_distplus: 250
+      fuzz_ff_si: 160
+      od_ts808: 250
+      dist_distplus -> od_ts808: 250
+      fuzz_ff_si -> dist_distplus: 156
+      fuzz_ff_si -> od_ts808: 154
+      od_ts808 -> dist_distplus: 250
+    unreachable_pairs_tried: 11
+    seconds: 764
+  categories:
+    A: 12
+    B: 10
+    C: 10
+    D: 4
+targets:
+- id: G01
+  source: generated
+  category: A
+  label: generated target G01
+  targets:
+  - name: gain_1k_db
+    lo: 14.88
+    hi: 26.88
+    unit: dB
+    label: Gain at 1 kHz
+  - name: ac_peak_db
+    lo: 26.8
+    hi: 38.8
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.2031
+    hi: 0.8731
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 3
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 14
+      fuzz_ff_si:
+      - 160
+      - 3
+      od_ts808:
+      - 250
+      - 3
+    pool_all:
+    - 1470
+    - 44
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G02
+  source: generated
+  category: A
+  label: generated target G02
+  targets:
+  - name: gain_1k_db
+    lo: 4.736
+    hi: 13.74
+    unit: dB
+    label: Gain at 1 kHz
+  - name: ac_peak_hz
+    lo: 2240.0
+    hi: 8546.0
+    unit: Hz
+    label: Response peak
+  - name: even_odd
+    lo: 0.007918
+    hi: 0.2292
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 13
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 21
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 13
+    pool_all:
+    - 1470
+    - 59
+  calibration:
+    factor: 3.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.008
+    capped: false
+- id: G03
+  source: generated
+  category: A
+  label: generated target G03
+  targets:
+  - name: thd_pct
+    lo: 8.5
+    hi: 40.53
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 11.29
+    hi: 21.79
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.1356
+    hi: 0.4858
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 13
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 14
+      fuzz_ff_si:
+      - 160
+      - 16
+      od_ts808:
+      - 250
+      - 13
+    pool_all:
+    - 1470
+    - 81
+  calibration:
+    factor: 3.5
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    capped: false
+- id: G04
+  source: generated
+  category: A
+  label: generated target G04
+  targets:
+  - name: gain_1k_db
+    lo: 16.29
+    hi: 28.29
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 5.343
+    hi: 31.85
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 1792.0
+    hi: 10680.0
+    unit: Hz
+    label: Response peak
+  - name: out_pk_v
+    lo: 0.4245
+    hi: 1.825
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 14
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 10
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 14
+    pool_all:
+    - 1470
+    - 38
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G05
+  source: generated
+  category: A
+  label: generated target G05
+  targets:
+  - name: gain_1k_db
+    lo: 9.064
+    hi: 19.56
+    unit: dB
+    label: Gain at 1 kHz
+  - name: ac_peak_db
+    lo: 19.65
+    hi: 30.15
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.8237
+    hi: 2.951
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 6
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 15
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 6
+    pool_all:
+    - 1470
+    - 29
+  calibration:
+    factor: 3.5
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    capped: false
+- id: G06
+  source: generated
+  category: A
+  label: generated target G06
+  targets:
+  - name: thd_pct
+    lo: 5.456
+    hi: 11.91
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 390.3
+    hi: 852.4
+    unit: Hz
+    label: Response peak
+  - name: out_pk_v
+    lo: 0.3342
+    hi: 0.6327
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 15
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 15
+    pool_all:
+    - 1470
+    - 17
+  calibration:
+    factor: 1.75
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    capped: false
+- id: G07
+  source: generated
+  category: A
+  label: generated target G07
+  targets:
+  - name: gain_1k_db
+    lo: 0.9097
+    hi: 12.91
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 2.067
+    hi: 12.32
+    unit: '%'
+    label: THD (300 mV)
+  - name: even_odd
+    lo: 0.0
+    hi: 0.3889
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 37
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 4
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 37
+    pool_all:
+    - 1470
+    - 66
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G08
+  source: generated
+  category: B
+  label: generated target G08
+  targets:
+  - name: thd_pct
+    lo: 6.04
+    hi: 36.0
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 42.31
+    hi: 54.31
+    unit: dB
+    label: Response peak level
+  - name: even_odd
+    lo: 0.01594
+    hi: 0.4857
+    unit: ''
+    label: Even/odd harmonics
+  - name: out_pk_v
+    lo: 0.4019
+    hi: 1.728
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 3
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 23
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G09
+  source: generated
+  category: B
+  label: generated target G09
+  targets:
+  - name: gain_1k_db
+    lo: -1.52
+    hi: 10.48
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 14.04
+    hi: 83.69
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 10.05
+    hi: 22.05
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.05608
+    hi: 0.2412
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 13
+      fuzz_ff_si:
+      - 160
+      - 19
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 48
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G10
+  source: generated
+  category: B
+  label: generated target G10
+  targets:
+  - name: thd_pct
+    lo: 18.75
+    hi: 89.43
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 39.64
+    hi: 50.14
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.479
+    hi: 1.717
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 13
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 29
+  calibration:
+    factor: 3.5
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G11
+  source: generated
+  category: B
+  label: generated target G11
+  targets:
+  - name: gain_1k_db
+    lo: 21.34
+    hi: 33.34
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 16.57
+    hi: 98.79
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 21.39
+    hi: 33.39
+    unit: dB
+    label: Response peak level
+  - name: out_pk_v
+    lo: 0.1434
+    hi: 0.6164
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 3
+      fuzz_ff_si:
+      - 160
+      - 2
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 27
+  calibration:
+    factor: 4.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    capped: false
+- id: G12
+  source: generated
+  category: B
+  label: generated target G12
+  targets:
+  - name: thd_pct
+    lo: 20.84
+    hi: 66.5
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 30.04
+    hi: 37.84
+    unit: dB
+    label: Response peak level
+  - name: even_odd
+    lo: 0.01769
+    hi: 0.2
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 22
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 41
+  calibration:
+    factor: 2.6
+    hit_rate: 0.064
+    hit_rate_factor_1: 0.024
+    capped: false
+- id: G13
+  source: generated
+  category: B
+  label: generated target G13
+  targets:
+  - name: ac_peak_db
+    lo: 33.45
+    hi: 45.45
+    unit: dB
+    label: Response peak level
+  - name: even_odd
+    lo: 0.002437
+    hi: 0.4173
+    unit: ''
+    label: Even/odd harmonics
+  - name: out_pk_v
+    lo: 0.164
+    hi: 0.705
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 17
+      fuzz_ff_si:
+      - 160
+      - 2
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 57
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.008
+    capped: false
+- id: G14
+  source: generated
+  category: B
+  label: generated target G14
+  targets:
+  - name: gain_1k_db
+    lo: 17.9
+    hi: 24.8
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 25.06
+    hi: 69.95
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 29.04
+    hi: 35.94
+    unit: dB
+    label: Response peak level
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 14
+      fuzz_ff_si:
+      - 160
+      - 2
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 21
+  calibration:
+    factor: 2.3
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G15
+  source: generated
+  category: B
+  label: generated target G15
+  targets:
+  - name: gain_1k_db
+    lo: 27.38
+    hi: 39.38
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 16.45
+    hi: 98.08
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 43.07
+    hi: 55.07
+    unit: dB
+    label: Response peak level
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 13
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 19
+  calibration:
+    factor: 4.0
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G16
+  source: generated
+  category: B
+  label: generated target G16
+  targets:
+  - name: gain_1k_db
+    lo: 10.39
+    hi: 16.39
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 18.57
+    hi: 45.33
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 20.66
+    hi: 26.66
+    unit: dB
+    label: Response peak level
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 15
+      fuzz_ff_si:
+      - 160
+      - 3
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 26
+  calibration:
+    factor: 2.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G17
+  source: generated
+  category: C
+  label: generated target G17
+  targets:
+  - name: gain_1k_db
+    lo: 12.88
+    hi: 19.78
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 16.42
+    hi: 45.83
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 522.6
+    hi: 1459.0
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 19
+  calibration:
+    factor: 2.3
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G18
+  source: generated
+  category: C
+  label: generated target G18
+  targets:
+  - name: gain_1k_db
+    lo: 28.65
+    hi: 36.45
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 16.0
+    hi: 51.04
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 30.16
+    hi: 37.96
+    unit: dB
+    label: Response peak level
+  - name: even_odd
+    lo: 0.01105
+    hi: 0.1809
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 16
+  calibration:
+    factor: 2.6
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.008
+    capped: false
+- id: G19
+  source: generated
+  category: C
+  label: generated target G19
+  targets:
+  - name: gain_1k_db
+    lo: 38.87
+    hi: 50.87
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 6.223
+    hi: 37.09
+    unit: '%'
+    label: THD (300 mV)
+  - name: out_pk_v
+    lo: 0.2118
+    hi: 0.9108
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 27
+  calibration:
+    factor: 4.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G20
+  source: generated
+  category: C
+  label: generated target G20
+  targets:
+  - name: thd_pct
+    lo: 23.76
+    hi: 75.82
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 488.7
+    hi: 1560.0
+    unit: Hz
+    label: Response peak
+  - name: even_odd
+    lo: 0.01756
+    hi: 0.1996
+    unit: ''
+    label: Even/odd harmonics
+  - name: out_pk_v
+    lo: 0.2815
+    hi: 0.7265
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 19
+  calibration:
+    factor: 2.6
+    hit_rate: 0.072
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G21
+  source: generated
+  category: C
+  label: generated target G21
+  targets:
+  - name: gain_1k_db
+    lo: 44.38
+    hi: 53.38
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 8.214
+    hi: 31.34
+    unit: '%'
+    label: THD (300 mV)
+  - name: even_odd
+    lo: 0.00509
+    hi: 0.2197
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 20
+  calibration:
+    factor: 3.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.012
+    capped: false
+- id: G22
+  source: generated
+  category: C
+  label: generated target G22
+  targets:
+  - name: gain_1k_db
+    lo: 48.07
+    hi: 58.57
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 12.23
+    hi: 58.34
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 399.8
+    hi: 1906.0
+    unit: Hz
+    label: Response peak
+  - name: even_odd
+    lo: 0.01765
+    hi: 0.3623
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 15
+  calibration:
+    factor: 3.5
+    hit_rate: 0.052
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G23
+  source: generated
+  category: C
+  label: generated target G23
+  targets:
+  - name: thd_pct
+    lo: 16.63
+    hi: 79.28
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 459.0
+    hi: 2189.0
+    unit: Hz
+    label: Response peak
+  - name: even_odd
+    lo: 0.0
+    hi: 0.2441
+    unit: ''
+    label: Even/odd harmonics
+  - name: out_pk_v
+    lo: 0.0298
+    hi: 0.1068
+    unit: V
+    label: Output peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 16
+  calibration:
+    factor: 3.5
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.004
+    capped: false
+- id: G24
+  source: generated
+  category: C
+  label: generated target G24
+  targets:
+  - name: gain_1k_db
+    lo: 41.26
+    hi: 50.26
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 7.011
+    hi: 26.74
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_db
+    lo: 50.27
+    hi: 59.27
+    unit: dB
+    label: Response peak level
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 14
+  calibration:
+    factor: 3.0
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.0
+    capped: false
+- id: G25
+  source: generated
+  category: C
+  label: generated target G25
+  targets:
+  - name: gain_1k_db
+    lo: 23.63
+    hi: 30.53
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: 24.61
+    hi: 68.69
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 628.3
+    hi: 1754.0
+    unit: Hz
+    label: Response peak
+  - name: ac_peak_db
+    lo: 23.64
+    hi: 30.54
+    unit: dB
+    label: Response peak level
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 14
+  calibration:
+    factor: 2.3
+    hit_rate: 0.056
+    hit_rate_factor_1: 0.012
+    capped: false
+- id: G26
+  source: generated
+  category: C
+  label: generated target G26
+  targets:
+  - name: thd_pct
+    lo: 23.95
+    hi: 37.42
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 637.0
+    hi: 995.3
+    unit: Hz
+    label: Response peak
+  - name: even_odd
+    lo: 0.03097
+    hi: 0.07646
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 15
+  calibration:
+    factor: 1.0
+    hit_rate: 0.06
+    hit_rate_factor_1: 0.06
+    capped: false
+- id: U1
+  source: generated
+  category: D
+  label: likely unreachable U1
+  construction: gain_1k_db lo, thd_pct hi at p90/p10 of the playable pool
+  targets:
+  - name: gain_1k_db
+    lo: 43.47
+    hi: null
+    unit: dB
+    label: Gain at 1 kHz
+  - name: thd_pct
+    lo: null
+    hi: 7.599
+    unit: '%'
+    label: THD (300 mV)
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 0
+- id: U2
+  source: generated
+  category: D
+  label: likely unreachable U2
+  construction: even_odd lo, ac_peak_hz lo at p95/p5 of the playable pool
+  targets:
+  - name: even_odd
+    lo: 1.694
+    hi: null
+    unit: ''
+    label: Even/odd harmonics
+  - name: ac_peak_hz
+    lo: 4376.0
+    hi: null
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 0
+- id: U3
+  source: generated
+  category: D
+  label: likely unreachable U3
+  construction: thd_pct lo, ac_peak_hz lo at p95/p5 of the playable pool
+  targets:
+  - name: thd_pct
+    lo: 42.13
+    hi: null
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 4376.0
+    hi: null
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 0
+- id: U4
+  source: generated
+  category: D
+  label: likely unreachable U4
+  construction: gain_1k_db lo, even_odd lo at p98/p2 of the playable pool
+  targets:
+  - name: gain_1k_db
+    lo: 60.06
+    hi: null
+    unit: dB
+    label: Gain at 1 kHz
+  - name: even_odd
+    lo: 2.28
+    hi: null
+    unit: ''
+    label: Even/odd harmonics
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 0
+- id: H1
+  source: hand
+  category: A
+  label: rougher than a TS-808, less than a fuzz
+  targets:
+  - name: thd_pct
+    lo: 15.0
+    hi: 30.0
+    unit: '%'
+    label: THD (300 mV)
+  - name: gain_1k_db
+    lo: 10.0
+    hi: null
+    unit: dB
+    label: Gain at 1 kHz
+  - name: ac_peak_hz
+    lo: 600.0
+    hi: 1200.0
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 9
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 9
+    pool_all:
+    - 1470
+    - 33
+  hit_rate_best_chain: 0.064
+- id: H2
+  source: hand
+  category: A
+  label: clean boost
+  targets:
+  - name: thd_pct
+    lo: null
+    hi: 2.0
+    unit: '%'
+    label: THD (300 mV)
+  - name: gain_1k_db
+    lo: 12.0
+    hi: null
+    unit: dB
+    label: Gain at 1 kHz
+  evidence:
+    start_chain:
+    - 250
+    - 1
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 3
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 1
+    pool_all:
+    - 1470
+    - 4
+  hit_rate_best_chain: 0.012
+- id: H3
+  source: hand
+  category: A
+  label: bright, raw distortion
+  targets:
+  - name: thd_pct
+    lo: 25.0
+    hi: null
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 2000.0
+    hi: null
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 2
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 131
+      fuzz_ff_si:
+      - 160
+      - 2
+      od_ts808:
+      - 250
+      - 2
+    pool_all:
+    - 1470
+    - 162
+  hit_rate_best_chain: 0.524
+- id: H4
+  source: hand
+  category: A
+  label: dark, smooth overdrive
+  targets:
+  - name: thd_pct
+    lo: 3.0
+    hi: 10.0
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: null
+    hi: 700.0
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 52
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 0
+      od_ts808:
+      - 250
+      - 52
+    pool_all:
+    - 1470
+    - 88
+  hit_rate_best_chain: 0.208
+- id: H5
+  source: hand
+  category: B
+  label: asymmetric, gated fuzz
+  targets:
+  - name: even_odd
+    lo: 0.8
+    hi: null
+    unit: ''
+    label: Even/odd harmonics
+  - name: thd_pct
+    lo: 30.0
+    hi: null
+    unit: '%'
+    label: THD (300 mV)
+  evidence:
+    start_chain:
+    - 250
+    - 0
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 107
+      od_ts808:
+      - 250
+      - 0
+    pool_all:
+    - 1470
+    - 154
+  hit_rate_best_chain: 0.428
+- id: H6
+  source: hand
+  category: A
+  label: fuzz into overdrive, mid-forward
+  targets:
+  - name: even_odd
+    lo: 0.3
+    hi: null
+    unit: ''
+    label: Even/odd harmonics
+  - name: thd_pct
+    lo: 15.0
+    hi: null
+    unit: '%'
+    label: THD (300 mV)
+  - name: ac_peak_hz
+    lo: 500.0
+    hi: 1200.0
+    unit: Hz
+    label: Response peak
+  evidence:
+    start_chain:
+    - 250
+    - 10
+    single_blocks:
+      dist_distplus:
+      - 250
+      - 0
+      fuzz_ff_si:
+      - 160
+      - 4
+      od_ts808:
+      - 250
+      - 10
+    pool_all:
+    - 1470
+    - 56
+  hit_rate_best_chain: 0.108

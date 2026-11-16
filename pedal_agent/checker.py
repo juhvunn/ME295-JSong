@@ -49,6 +49,20 @@ def _harmonics(t, v, f0, n=10):
     sp = np.abs(np.fft.rfft(vv)); f = np.fft.rfftfreq(N, tt[1] - tt[0])
     return np.array([sp[np.argmin(abs(f - k * f0))] for k in range(1, n + 1)])
 
+def distortion(t, v, f0):
+    """(thd_pct, even_odd) of waveform v(t) at fundamental f0, harmonics 2-10."""
+    h = _harmonics(t, v, f0)
+    odd = np.sqrt((h[2::2] ** 2).sum())
+    return (float(100 * np.sqrt((h[1:] ** 2).sum()) / h[0]),
+            float(np.sqrt((h[1::2] ** 2).sum()) / odd) if odd > 0 else 0.0)
+
+# Measured THD floor of distortion() for a pure sine / linear chain (1.13e-4 to 1.23e-4 %, Hann-window
+# leakage of the 20 ms window; tests/test_checker_floor.py). Below ~10x this, thd_pct and even_odd are noise.
+THD_FLOOR_PCT = 1.3e-4
+
+# AC and transient analyses shared by check() and the noise-floor measurement (tests/test_checker_floor.py)
+ANALYSES = ["ac dec 50 20 20k", "wrdata ac.txt vdb(out)", "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"]
+
 def simulate(cand: Candidate, f0=1000.0, amp=0.3):
     """One netlist for the whole chain; DC checks of block i are probed as v(x<i>.<node>)."""
     blocks, probes = [], []   # probes: (label, vector, expect)
@@ -58,9 +72,7 @@ def simulate(cand: Candidate, f0=1000.0, amp=0.3):
         prefix = f"{blk.block_id}." if len(cand.chain) > 1 else ""
         probes += [(prefix + name, f"v(x{i}.{c['node']})", c["expect"])
                    for name, c in meta.get("dc_checks", {}).items()]
-    ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(v for _, v, _ in probes) or 'v(out)'}",
-                      "ac dec 50 20 20k", "wrdata ac.txt vdb(out)",
-                      "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"])
+    ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(v for _, v, _ in probes) or 'v(out)'}", *ANALYSES])
     net = netlist(blocks, models_text(cand), amp, f0, ctrl)
     sha = hashlib.sha256(net.encode()).hexdigest()
     r = run_ngspice(net)  # sandboxed: directive filter, timeout, runs/<id>/ + logs/<id>.log
@@ -80,12 +92,10 @@ def check(cand: Candidate, spec: TargetSpec) -> CheckReport:
               for (label, _, expect), v in zip(probes, dc) if not expect[0] <= v <= expect[1]]
     ac, tr = out["ac"], out["tran"]
     i = ac[:, 1].argmax()
-    h = _harmonics(tr[:, 0], tr[:, 3], f0)
-    odd = np.sqrt((h[2::2] ** 2).sum())
+    thd, eo = distortion(tr[:, 0], tr[:, 3], f0)
     m = {"gain_1k_db": float(np.interp(1000.0, ac[:, 0], ac[:, 1])),
          "ac_peak_db": float(ac[i, 1]), "ac_peak_hz": float(ac[i, 0]),
-         "thd_pct": float(100 * np.sqrt((h[1:] ** 2).sum()) / h[0]),
-         "even_odd": float(np.sqrt((h[1::2] ** 2).sum()) / odd) if odd > 0 else 0.0,
+         "thd_pct": thd, "even_odd": eo,
          "out_pk_v": float(np.abs(tr[:, 3] - tr[:, 3].mean()).max())}
     results, score = [], 0.0
     for tg in spec.targets:
