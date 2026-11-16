@@ -290,6 +290,15 @@ Each step ends with its tests, a short report and your OK before committing.
 - **P3. Size:** 30 targets, **A 7, B 9, C 10, D 4**; chains of 1–2 blocks. Agent runs use a stratified
   subset (e.g. 12 targets × 3 repeats), decided once there is an API budget, with an estimated cost
   per agent mode based on the measured cost of a real run.
+  *Step 4 decisions (2026-11-16):* the subset is **12 targets weighted toward the research
+  question: generated A 2, B 4, C 4, D 1, plus 1 hand target**, chosen by `scripts/make_subset.py`
+  with seed 2611 from the category labels only, and committed in `benchmarks/v1_subset.yaml` before
+  any agent run. The summary has a **subset view** comparing all methods on exactly those targets
+  (random methods filtered from their full-set runs) and shows run counts next to every success
+  rate. Random methods: 5 seeds for the first look; **20 seeds for the reported results** (as in
+  `scripts/baseline_success.py`, run overnight). `--llm real` prints an expected and worst-case cost
+  (placeholder per-call token estimate in `config.yaml` `benchmark:`, to be replaced by the measured
+  value) and needs a typed "yes".
 - **P4. Tolerances** as in the table above, 3–4 metrics per target, and **only metrics that vary on
   the solution's chain** (10–90 % spread ≥ 2 × the window width; spreads reported).
   *Superseded 2026-11-16 (after review of the first v1 draft, before any method ran on it):* the

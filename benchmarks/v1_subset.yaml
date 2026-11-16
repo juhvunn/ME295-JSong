@@ -1,0 +1,18 @@
+# Stratified subset for agent runs. Fixed before any agent run; never edit after results.
+version: v1
+seed: 2611
+rule: 'random.Random(seed).sample per stratum over sorted ids, from category labels
+  only: generated A 2, B 4, C 4, D 1; hand 1'
+targets:
+- G03
+- G04
+- G08
+- G12
+- G13
+- G16
+- G18
+- G23
+- G25
+- G26
+- U3
+- H4
