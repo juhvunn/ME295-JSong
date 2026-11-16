@@ -23,6 +23,7 @@ supply_v: 9.0
 models: {}
 
 chain_hint: "Prefers to be first in the chain (directly after the pickup)."
+prefers_first: true   # Validate warns if not first (impedance-sensitive input)
 
 params:
   fuzz:    {type: pot, designator: R6, r_total: 1k, taper: linear, invert: true, mode: divider, default: 0.5,
