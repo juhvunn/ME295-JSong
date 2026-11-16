@@ -1,19 +1,23 @@
 """LLM clients for the Tone Analyst and Planner nodes.
 
-Every client returns (validated Pydantic output, LLMUsage). FakeLLM replays a
-fixed script with no API calls, so graph tests are free and repeatable.
+Every client returns (validated Pydantic output, LLMUsage). AnthropicLLM calls
+Claude with structured outputs; FakeLLM replays a fixed script with no API
+calls, so graph tests are free and repeatable.
 """
 from typing import Protocol, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from pedal_agent.config import load_config
 from pedal_agent.schemas import LLMUsage, MetricTarget, PlannerDecision, ToneDraft
 
 T = TypeVar("T", bound=BaseModel)
 
 
 class LLMOutputError(RuntimeError):
-    pass
+    def __init__(self, message: str, usage: LLMUsage | None = None):
+        super().__init__(message)
+        self.usage = usage  # tokens spent on the failed attempts, for cost accounting
 
 
 class LLM(Protocol):
@@ -21,6 +25,54 @@ class LLM(Protocol):
     effort: str
 
     def generate(self, node: str, system: str, prompt: str, schema: type[T]) -> tuple[T, LLMUsage]: ...
+
+
+class AnthropicLLM:
+    """Claude via client.messages.parse(output_format=schema). Model and effort come only
+    from config.yaml. No temperature (not settable) and no forced tool use (unsupported)."""
+
+    def __init__(self, config: dict | None = None, client=None):
+        cfg = (config or load_config())["llm"]
+        self.model_id, self.effort = cfg["model_id"], cfg["effort"]
+        self.max_tokens, self.attempts = cfg["max_tokens"], cfg["max_retries"]
+        if client is None:
+            import anthropic
+            from dotenv import load_dotenv
+
+            load_dotenv()  # ANTHROPIC_API_KEY from the environment or the gitignored .env
+            client = anthropic.Anthropic()
+        self.client = client
+
+    def generate(self, node, system, prompt, schema):
+        content, error = prompt, None
+        tokens_in = tokens_out = 0
+        for attempt in range(1, self.attempts + 1):
+            usage = None
+            try:
+                response = self.client.messages.parse(
+                    model=self.model_id, max_tokens=self.max_tokens, system=system,
+                    messages=[{"role": "user", "content": content}],
+                    output_format=schema, output_config={"effort": self.effort})
+                usage = response.usage
+                parsed = response.parsed_output
+                if response.stop_reason == "refusal":
+                    tokens_in, tokens_out = tokens_in + usage.input_tokens, tokens_out + usage.output_tokens
+                    raise LLMOutputError(f"{node}: model refused ({response.stop_details})",
+                                         self._usage(node, tokens_in, tokens_out, attempt))
+                error = None if parsed is not None else f"no parsed output (stop_reason={response.stop_reason})"
+            except ValidationError as e:
+                parsed, error = None, str(e)
+            if usage is not None:
+                tokens_in, tokens_out = tokens_in + usage.input_tokens, tokens_out + usage.output_tokens
+            if error is None:
+                return parsed, self._usage(node, tokens_in, tokens_out, attempt)
+            content = f"{prompt}\n\nYour previous answer was invalid: {error}\nReturn a corrected answer."
+        raise LLMOutputError(f"{node}: no valid {schema.__name__} after {self.attempts} attempts: {error}",
+                             self._usage(node, tokens_in, tokens_out, self.attempts))
+
+    def _usage(self, node, tokens_in, tokens_out, attempts) -> LLMUsage:
+        return LLMUsage(node=node, model_id=self.model_id, effort=self.effort,
+                        input_tokens=tokens_in, output_tokens=tokens_out, attempts=attempts)
 
 
 class FakeLLM:

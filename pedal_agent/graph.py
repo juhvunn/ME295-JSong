@@ -121,8 +121,8 @@ def build_graph(llm: LLM, store: RunStore, checkpointer, router_cfg: RouterConfi
         run.steps.append(step)
         return step
 
-    def fail(run: RunRecord, where: str, err: Exception) -> dict:
-        add_step(run, agent="router", action="stop", title=f"Error in {where}", why=str(err))
+    def fail(run: RunRecord, where: str, err: LLMOutputError) -> dict:
+        add_step(run, agent="router", action="stop", title=f"Error in {where}", why=str(err), llm=err.usage)
         run.status, run.stop_reason = "stopped", "error"
         return commit(run, "end")
 
