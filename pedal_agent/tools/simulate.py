@@ -87,9 +87,9 @@ def simulate(
     timeout_s: float | None = None,
     executable: str | None = None,
 ) -> SimResult:
-    """Save netlist to runs/<id>/circuit.cir and run `ngspice -b` with a timeout.
+    """Save netlist to runs/sims/<id>/circuit.cir and run `ngspice -b` with a timeout.
 
-    Output files written by wrdata land in runs/<id>/; the ngspice log goes to logs/<id>.log.
+    Output files written by wrdata land in runs/sims/<id>/; the ngspice log goes to logs/<id>.log.
     """
     check_netlist(netlist)
 
@@ -100,7 +100,7 @@ def simulate(
     timeout_s = timeout_s if timeout_s is not None else cfg["ngspice"]["timeout_s"]
     executable = executable or cfg["ngspice"]["executable"]
 
-    run_dir = REPO_ROOT / cfg["paths"]["runs_dir"] / run_id
+    run_dir = REPO_ROOT / cfg["paths"]["sims_dir"] / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     logs_dir = REPO_ROOT / cfg["paths"]["logs_dir"]
     logs_dir.mkdir(parents=True, exist_ok=True)

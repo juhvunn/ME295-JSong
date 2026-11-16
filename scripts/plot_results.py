@@ -22,7 +22,7 @@ from pedal_agent.tools.simulate import read_wrdata  # noqa: E402
 
 
 def _latest_run_dir() -> Path:
-    runs_dir = REPO_ROOT / load_config()["paths"]["runs_dir"]
+    runs_dir = REPO_ROOT / load_config()["paths"]["sims_dir"]
     run_dirs = [path for path in runs_dir.iterdir() if path.is_dir()]
     if not run_dirs:
         raise FileNotFoundError(f"no run directories found in {runs_dir}")

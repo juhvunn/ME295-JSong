@@ -2,9 +2,10 @@
 
 Called after every Planner attempt (checked, invalid, or duplicate). Rules, in order:
   all_pass   the latest check passes every target (DC checks OK, no errors)
-  budget     sims_used >= sim_budget, or the Planner-call safety net is reached
+  budget     sims_used >= run.sim_budget, or the Planner-call safety net is reached
   stall      the best score has not improved in the last `stall_checks` checks
   duplicate  the last two Planner proposals were both duplicates of earlier candidates
+all_pass, stall and duplicate only look at steps after the latest human feedback.
 """
 from dataclasses import dataclass
 
@@ -15,19 +16,26 @@ from pedal_agent.validate import fingerprint
 
 @dataclass
 class RouterConfig:
-    sim_budget: int = 12
+    sim_budget: int = 12                # initial RunRecord.sim_budget
     stall_checks: int = 3
-    max_planner_calls: int = 24
+    planner_calls_per_sim: int = 2      # safety net: planner calls <= this * run.sim_budget
+    feedback_extra_sims: int = 4        # added to run.sim_budget by each human feedback
 
     @classmethod
     def from_config(cls, cfg: dict | None = None) -> "RouterConfig":
         run = (cfg or load_config())["run"]
-        return cls(run["sim_budget"], run["stall_checks"],
-                   run["max_planner_calls_per_sim"] * run["sim_budget"])
+        return cls(run["sim_budget"], run["stall_checks"], run["max_planner_calls_per_sim"],
+                   run["feedback_extra_sims"])
 
 
 def planner_steps(run: RunRecord) -> list[Step]:
     return [s for s in run.steps if s.agent == "planner"]
+
+
+def since_feedback(run: RunRecord) -> list[Step]:
+    """Steps after the latest human feedback (all steps if there is none)."""
+    last = max((i for i, s in enumerate(run.steps) if s.action == "human_feedback"), default=-1)
+    return run.steps[last + 1:]
 
 
 def checked_steps(run: RunRecord) -> list[Step]:
@@ -51,13 +59,13 @@ def all_pass(step: Step) -> bool:
 
 def route(run: RunRecord, cfg: RouterConfig) -> str | None:
     """Return a stop_reason, or None to continue with the Planner."""
-    planned = planner_steps(run)
-    checked = checked_steps(run)
+    recent = since_feedback(run)
+    planned = [s for s in recent if s.agent == "planner"]
     if planned and planned[-1].report is not None and all_pass(planned[-1]):
         return "all_pass"
-    if run.sims_used >= cfg.sim_budget or len(planned) >= cfg.max_planner_calls:
+    if run.sims_used >= run.sim_budget or len(planner_steps(run)) >= cfg.planner_calls_per_sim * run.sim_budget:
         return "budget"
-    scores = [s.report.score for s in checked]
+    scores = [s.report.score for s in recent if s.report is not None]
     n = cfg.stall_checks
     if len(scores) > n and min(scores[-n:]) >= min(scores[:-n]):
         return "stall"

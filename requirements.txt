@@ -8,3 +8,4 @@ pytest
 anthropic
 langgraph
 jinja2
+langgraph-checkpoint-sqlite

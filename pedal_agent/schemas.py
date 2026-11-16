@@ -171,7 +171,8 @@ class RunRecord(BaseModel):
 
     @property
     def topology_changes(self) -> int:
-        return sum(s.action in TOPOLOGY_ACTIONS for s in self.steps)
+        """Simulated candidates whose chain changed blocks (rejected/duplicate proposals excluded)."""
+        return sum(s.action in TOPOLOGY_ACTIONS and s.report is not None for s in self.steps)
 
     @property
     def best(self) -> Optional[Step]:

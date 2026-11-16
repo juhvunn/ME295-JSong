@@ -4,7 +4,7 @@ import pytest
 from pedal_agent.router import RouterConfig, best_step, find_duplicate, route
 from pedal_agent.schemas import (BlockInstance, Candidate, CheckReport, MetricResult, RunRecord, Step)
 
-CFG = RouterConfig(sim_budget=12, stall_checks=3, max_planner_calls=24)
+CFG = RouterConfig(sim_budget=12, stall_checks=3, planner_calls_per_sim=2)
 
 
 def cand(drive):
@@ -92,4 +92,15 @@ def test_best_step_and_find_duplicate():
 
 def test_config_from_yaml():
     cfg = RouterConfig.from_config()
-    assert (cfg.sim_budget, cfg.stall_checks, cfg.max_planner_calls) == (12, 3, 24)
+    assert (cfg.sim_budget, cfg.stall_checks, cfg.planner_calls_per_sim, cfg.feedback_extra_sims) == (12, 3, 2, 4)
+
+
+def test_feedback_restarts_stall_and_uses_extended_budget():
+    run = run_with(("check", 0.5, 0.1), ("check", 0.6, 0.2), ("check", 0.7, 0.2), ("check", 0.8, 0.2))
+    assert route(run, CFG) == "stall"
+    run.steps.append(Step(n=len(run.steps) + 1, agent="human", action="human_feedback", title="", why="darker"))
+    assert route(run, CFG) is None
+    run.sims_used, run.sim_budget = 12, 16
+    assert route(run, CFG) is None
+    run.sims_used = 16
+    assert route(run, CFG) == "budget"

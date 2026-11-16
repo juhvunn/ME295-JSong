@@ -136,14 +136,16 @@ def validate(candidate: Candidate, claimed_action: str, previous_chain: list[str
     return ValidationResult(Candidate(chain=chain, rationale=candidate.rationale), action, errors, warnings)
 
 
+def full_params(blk: BlockInstance) -> dict:
+    """All params of a block instance, defaults filled in, numbers as floats."""
+    _, meta = load_block(blk.block_id)
+    full = {}
+    for name, spec in meta["params"].items():
+        v = blk.params.get(name, spec.get("default", spec.get("value")))
+        full[name] = v if spec["type"] == "choice" else round(parse_value(v), 9)
+    return full
+
+
 def fingerprint(candidate: Candidate) -> tuple:
     """Identity of a (validated) chain with defaults filled in, for duplicate detection."""
-    out = []
-    for blk in candidate.chain:
-        _, meta = load_block(blk.block_id)
-        full = {}
-        for name, spec in meta["params"].items():
-            v = blk.params.get(name, spec.get("default", spec.get("value")))
-            full[name] = v if spec["type"] == "choice" else round(parse_value(v), 9)
-        out.append((blk.block_id, tuple(sorted(full.items()))))
-    return tuple(out)
+    return tuple((blk.block_id, tuple(sorted(full_params(blk).items()))) for blk in candidate.chain)
