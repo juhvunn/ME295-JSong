@@ -32,7 +32,10 @@ params:
            note: "reverse log; 1 = R7 -> 0 = max gain (~46.5 dB), 0 = min gain (~9.5 dB)"}
   level:  {type: pot, designator: R10, r_total: 100k, taper: log, mode: divider, default: 0.5}
   D_clip: {type: choice, designators: [D1, D2], choices: [si, ge, led, none], default: si,
-           note: "si = GGG default (1N4148/1N914), ge = original MXR (1N270), led, none"}
+           validated: {ge: false},
+           note: "si = GGG default (1N4148/1N914), ge = original MXR (1N270), led, none.
+                  ge uses the UNVALIDATED placeholder DGE (1N34A stand-in; no datasheet I-V data):
+                  Validate rejects it unless run.allow_unvalidated_models is true; excluded from Phase 3"}
   C4:     {type: component, value: 47n, min: 22n, max: 220n, series: E6,
            note: "gain-leg high-pass; fc = 1/(2*pi*(4.7k+R7)*C4), ~720 Hz at max gain"}
   C7:     {type: component, value: 1n, min: 470p, max: 10n, series: E6,

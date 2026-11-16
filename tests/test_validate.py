@@ -85,3 +85,26 @@ def test_fingerprint_fills_defaults():
     b = validate(cand(("od_ts808", {"drive": 0.5, "D_clip": "si", "C3": "47n"})), "initial_chain", None).candidate
     c = validate(cand(("od_ts808", {"drive": 0.6})), "initial_chain", None).candidate
     assert fingerprint(a) == fingerprint(b) != fingerprint(c)
+
+
+def test_unvalidated_choice_rejected_by_default():
+    res = validate(cand(("dist_distplus", {"D_clip": "ge"})), "initial_chain", None, allow_unvalidated=False)
+    assert not res.ok and "unvalidated placeholder" in res.errors[0]
+    assert "['si', 'led', 'none']" in res.errors[0]
+
+
+def test_unvalidated_choice_allowed_with_flag():
+    res = validate(cand(("dist_distplus", {"D_clip": "ge"})), "initial_chain", None, allow_unvalidated=True)
+    assert res.ok and res.candidate.chain[0].params == {"D_clip": "ge"}
+
+
+def test_config_default_rejects_unvalidated():
+    from pedal_agent.config import load_config
+    assert load_config()["run"]["allow_unvalidated_models"] is False
+    assert not validate(cand(("dist_distplus", {"D_clip": "ge"})), "initial_chain", None).ok
+
+
+def test_planner_catalog_hides_unvalidated_choices():
+    from pedal_agent.prompts import catalog
+    distplus = next(b for b in catalog(include_typical=False) if b["id"] == "dist_distplus")
+    assert distplus["params"]["D_clip"].startswith("choice ['si', 'led', 'none']")

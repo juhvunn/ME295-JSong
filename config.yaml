@@ -12,6 +12,7 @@ run:
   stall_checks: 3                    # stop if the best score has not improved in this many checks
   max_planner_calls_per_sim: 2       # safety net: planner calls <= this * sim_budget
   feedback_extra_sims: 4             # each human feedback adds this many sims to the budget
+  allow_unvalidated_models: false    # true only for manual experiments; Phase 3 runs must keep false
 
 ngspice:
   # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.

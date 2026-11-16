@@ -8,6 +8,7 @@ import json
 from pedal_agent.build import BLOCKS_DIR, load_block
 from pedal_agent.router import best_step
 from pedal_agent.schemas import Candidate, CheckReport, RunRecord, Step, TargetSpec
+from pedal_agent.validate import allow_unvalidated_default, allowed_choices
 
 METRIC_GUIDE = {
     "gain_1k_db": "small-signal gain at 1 kHz in dB (how loud / how hard it drives the amp)",
@@ -45,6 +46,8 @@ Keep the rationale to one or two sentences."""
 
 
 def catalog(include_typical: bool) -> list[dict]:
+    """Compact block catalog; choices with unvalidated part models are left out unless allowed."""
+    allow = allow_unvalidated_default()
     out = []
     for d in sorted(p for p in BLOCKS_DIR.iterdir() if (p / "block.yaml").is_file()):
         _, meta = load_block(d.name)
@@ -53,11 +56,11 @@ def catalog(include_typical: bool) -> list[dict]:
             if p["type"] == "pot":
                 params[name] = f"knob 0-1 ({p['taper']}), default {p['default']}"
             elif p["type"] == "choice":
-                params[name] = f"choice {p['choices']}, default {p['default']}"
+                params[name] = f"choice {allowed_choices(p, allow)}, default {p['default']}"
             else:
                 params[name] = f"part {p['min']}-{p['max']} ({p.get('series', 'any')}), default {p['value']}"
             if p.get("note"):
-                params[name] += f"; {p['note']}"
+                params[name] += f"; {' '.join(str(p['note']).split())}"
         entry = {"id": meta["id"], "category": meta["category"], "name": meta["name"],
                  "character": " ".join(meta["character"].split()), "params": params}
         if meta.get("chain_hint"):

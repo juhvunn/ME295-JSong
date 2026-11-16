@@ -24,6 +24,8 @@ Ro   o out 50
 X1 inp inn vcc vee out JRC4558_HALF
 .ends
 
+* DGE: UNVALIDATED PLACEHOLDER for the 1N34A (stand-in for the MXR's 1N270). No datasheet
+* I-V data exists (see models/README.md); dist_distplus marks D_clip=ge as validated: false.
 .model DGE     D(Is=2e-7 N=1.3 Rs=10 Cjo=1p)     ; germanium-like, ~0.3 V at 1 mA
 .model Q2N3904 NPN(Is=6.7f Bf=300 Vaf=74 Cje=4.5p Cjc=3.6p Tf=0.3n Rb=10)
 .model QBC109C NPN(Is=10f Bf=520 Vaf=60 Cje=10p Cjc=4p Tf=0.5n Rb=10)

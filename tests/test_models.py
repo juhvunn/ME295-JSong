@@ -95,3 +95,31 @@ def test_single_9v_supply_swing_is_reported(name):
         swing.append(float(np.atleast_2d(np.loadtxt(res.run_dir / "op.txt"))[0, 1]))
     print(f"{name}: 9 V single supply, RL=2k to 4.5 V: output {swing[1]:.2f} .. {swing[0]:.2f} V")
     assert 1.5 < swing[1] < 2.5 and 6.5 < swing[0] < 7.5
+
+
+# ---------- diodes (A2): fitted models reproduce their datasheet points ----------
+import yaml  # noqa: E402
+
+DIODE_LIB = REPO_ROOT / "models" / "diodes_fitted.lib"
+DIODE_DATA = yaml.safe_load((REPO_ROOT / "models" / "diode_points.yaml").read_text(encoding="utf-8"))
+# tolerance per model (V): plan C: +-20 mV for silicon; +-3 % of VF for the LED
+DIODE_TOL = {"D1N914": lambda v: 0.020, "DLED_RED": lambda v: 0.03 * v}
+
+
+def test_diode_file_passes_sandbox_filter():
+    check_netlist(DIODE_LIB.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("name", list(DIODE_DATA["diodes"]))
+def test_fitted_diode_reproduces_datasheet_points(name):
+    pts = DIODE_DATA["diodes"][name]["fit_points"]
+    body = "\n".join(f"I{k} 0 a{k} DC {p['I']:g}\nD{k} a{k} 0 {name}" for k, p in enumerate(pts))
+    net = (f"* diode test\n{DIODE_LIB.read_text(encoding='utf-8')}\n.temp {DIODE_DATA['temperature_c']}\n{body}\n"
+           f".control\nop\nwrdata op.txt {' '.join(f'v(a{k})' for k in range(len(pts)))}\nquit\n.endc\n.end\n")
+    res = simulate(net)
+    assert res.ok, f"ngspice failed; see {res.log_path}"
+    v_sim = np.atleast_2d(np.loadtxt(res.run_dir / "op.txt"))[0, 1::2]
+    tol = DIODE_TOL[name]
+    for p, v in zip(pts, v_sim):
+        print(f"{name}: I={p['I']:.3g} A  datasheet {p['V']:.4f} V  ngspice {v:.4f} V  error {1e3 * (v - p['V']):+.1f} mV")
+        assert v == pytest.approx(p["V"], abs=tol(p["V"])), p["ref"]

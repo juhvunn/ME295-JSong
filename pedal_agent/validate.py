@@ -3,12 +3,15 @@
 Errors reject the candidate (no sim budget used; the errors go back to the
 Planner). Fixes and soft rules become warnings: component values are snapped to
 their E-series, the action label is derived from the actual chain change, and a
-block with prefers_first: true that is not first is flagged.
+block with prefers_first: true that is not first is flagged. Choices marked
+`validated: {choice: false}` in block.yaml (placeholder part models) are rejected
+unless run.allow_unvalidated_models is true in config.yaml.
 """
 import math
 from dataclasses import dataclass, field
 
 from pedal_agent.build import BLOCKS_DIR, load_block, parse_value
+from pedal_agent.config import load_config
 from pedal_agent.schemas import BlockInstance, Candidate
 
 MAX_CHAIN = 3
@@ -46,7 +49,19 @@ def snap(value: float, series: str, lo: float, hi: float) -> float:
     return min(options, key=lambda v: abs(math.log(v / value)))
 
 
-def check_params(blk: BlockInstance, meta: dict) -> tuple[dict, list[str], list[str]]:
+def allow_unvalidated_default() -> bool:
+    return bool(load_config()["run"].get("allow_unvalidated_models", False))
+
+
+def unvalidated(spec: dict, value) -> bool:
+    return spec.get("validated", {}).get(value, True) is False
+
+
+def allowed_choices(spec: dict, allow_unvalidated: bool) -> list:
+    return [c for c in spec["choices"] if allow_unvalidated or not unvalidated(spec, c)]
+
+
+def check_params(blk: BlockInstance, meta: dict, allow_unvalidated: bool = False) -> tuple[dict, list[str], list[str]]:
     params, errors, warnings = {}, [], []
     spec_all = meta["params"]
     for name, value in blk.params.items():
@@ -57,7 +72,10 @@ def check_params(blk: BlockInstance, meta: dict) -> tuple[dict, list[str], list[
             continue
         if spec["type"] == "choice":
             if value not in spec["choices"]:
-                errors.append(f"{where}={value!r}: not one of {spec['choices']}")
+                errors.append(f"{where}={value!r}: not one of {allowed_choices(spec, allow_unvalidated)}")
+            elif unvalidated(spec, value) and not allow_unvalidated:
+                errors.append(f"{where}={value!r}: uses an unvalidated placeholder part model; "
+                              f"allowed: {allowed_choices(spec, False)}")
             else:
                 params[name] = value
             continue
@@ -98,8 +116,11 @@ def derive_action(previous: list[str] | None, proposed: list[str]) -> str:
 
 
 def validate(candidate: Candidate, claimed_action: str, previous_chain: list[str] | None,
-             mode: str = "agent") -> ValidationResult:
-    """previous_chain: block ids of the last valid candidate (None before the first one)."""
+             mode: str = "agent", allow_unvalidated: bool | None = None) -> ValidationResult:
+    """previous_chain: block ids of the last valid candidate (None before the first one).
+    allow_unvalidated: None = use run.allow_unvalidated_models from config.yaml."""
+    if allow_unvalidated is None:
+        allow_unvalidated = allow_unvalidated_default()
     ids = [b.block_id for b in candidate.chain]
     errors, warnings = [], []
     if not 1 <= len(ids) <= MAX_CHAIN:
@@ -124,7 +145,7 @@ def validate(candidate: Candidate, claimed_action: str, previous_chain: list[str
         if blk.block_id not in known:
             continue
         _, meta = load_block(blk.block_id)
-        params, e, w = check_params(blk, meta)
+        params, e, w = check_params(blk, meta, allow_unvalidated)
         errors += e
         warnings += w
         if meta.get("prefers_first") and pos > 0:

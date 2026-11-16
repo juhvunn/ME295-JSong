@@ -17,9 +17,9 @@ The names must match exactly, because block templates refer to them by name: `mo
 | `Q2N4401` | 2N4401 NPN | `.model … NPN` | standard `C B E` | od_ts808 (input/output buffers) | Manufacturer model (e.g. onsemi) | needed |
 | `Q2N3904` | 2N3904 NPN | `.model … NPN` | standard `C B E` | fuzz_ff_si (`Q_model` choice) | Manufacturer model (e.g. onsemi) | needed |
 | `QBC109C` | BC109C NPN | `.model … NPN` | standard `C B E` | fuzz_ff_si (`Q_model` choice) | Legacy Philips/NXP library, or a BC549C model as a modern equivalent (say which) | needed |
-| `D1N914` | 1N914 / 1N4148 silicon diode | `.model … D` | standard `A K` | od_ts808, dist_distplus (`D_clip=si`) | Manufacturer model (e.g. onsemi, Vishay) | needed |
-| `DGE` | Germanium diode (1N270 in the original MXR; 1N34A is common) | `.model … D` | standard `A K` | dist_distplus (`D_clip=ge`) | No vendor models in practice: a published community model or a fit to datasheet I-V points (say which) | needed |
-| `DLED_RED` | Red 3 mm/5 mm LED | `.model … D` | standard `A K` | od_ts808, dist_distplus (`D_clip=led`) | Usually fitted to datasheet I-V points (Vf ≈ 1.8 V at a few mA) | needed |
+| `D1N914` | 1N914 / 1N4148 silicon diode | `.model … D` | standard `A K` | od_ts808, dist_distplus (`D_clip=si`) | Fitted to onsemi typical curves, `diodes_fitted.lib` | **done** (A2) |
+| `DGE` | Germanium diode, 1N34A as a stand-in for the original MXR's 1N270 | `.model … D` | standard `A K` | dist_distplus (`D_clip=ge`) | No datasheet I-V data found: **unvalidated placeholder**, `D_clip=ge` rejected by Validate | **unvalidated** (A2, option 4) |
+| `DLED_RED` | Kingbright WP7113ID 5 mm red LED | `.model … D` | standard `A K` | od_ts808, dist_distplus (`D_clip=led`) | Fitted to Kingbright typical curve (0.1–10 mA), `diodes_fitted.lib`; µA region extrapolated | **done** (A2) |
 
 `fuzz_ff_si` has no `models:` entry: the transistor model *is* the `Q_model` choice
 (`Q2N3904` or `QBC109C`).
@@ -71,6 +71,127 @@ of copyright. The SHA-256 identifies the exact file read.)
   real pedal's.
 - Not modelled: input offset, common-mode input range, noise, supply current, second poles,
   temperature.
+
+## Diodes: fitted models (`diodes_fitted.lib`)
+
+`scripts/fit_diodes.py` fits `Is, N, Rs` of the SPICE diode equation
+`V = N·Vt·ln(I/Is + 1) + I·Rs` (Vt at 25 °C; `Tnom=25` in each `.model`) by least squares on the
+voltage error. The points and their sources are in `models/diode_points.yaml`; the `.lib` file is
+generated (edit the YAML, then run `python -m scripts.fit_diodes`). Validated by
+`tests/test_models.py` (ngspice reproduces every fit point within ±20 mV for silicon, ±3 % for the LED).
+
+**How the points were read.** The datasheet curves are vector graphics. Their vertex coordinates
+were extracted from the PDF (PyMuPDF `get_drawings`) and converted to amps and volts using the
+plot's grid lines (or frame and tick labels where no grid lines exist). This avoids reading
+values by eye. Uncertainty is a fraction of a grid step, except where stated below.
+
+**Sources** (downloaded 2026-11-16; PDFs not committed)
+
+| Ref | Document | URL | SHA-256 |
+|---|---|---|---|
+| [ONS] | onsemi, Small Signal Diode 1N91x, 1N4x48, FDLL914, FDLL4x48, publication 1N914/D, Rev. 6 (Sept 2024) | https://www.onsemi.com/pdf/datasheet/1n914-d.pdf | `70b7437841e5ace17185a8630e6eb245322f5337d0f72408a3f37cb7cf4b0147` |
+| [KB] | Kingbright WP7113ID (5 mm High Efficiency Red), Spec No. DSAF0012 / 1101005042, Rev V.14A, 01/08/2026 | https://www.kingbrightusa.com/images/catalog/SPEC/WP7113ID.pdf | `b5bb33f69c13fd92ab6d47a8fd71168b6e7ee685139c8f381957aeea9286c9da` |
+| [TAI] | Taitron 1N34A Germanium Glass Diode, Rev. A/AH (not used for a fit, see below) | https://www.taitroncomponents.com/catalog/Datasheet/1N34A.pdf | `2f8cf1a1e92822a9c1921b8c934d944ca91d36ff9f33b6b06fd22de890ccd57c` |
+
+### `D1N914` (1N914 / 1N4148)
+
+- **Data:** typical curves at 25 °C: [ONS] Fig. 3 (1–100 µA) and Fig. 4 (0.1–10 mA), p.3; 13 points.
+  The two figures agree within 2 mV at 100 µA.
+- **Fit (1 µA–10 mA):** Is = 4.179 nA, N = 1.938, Rs = 0.401 Ω. **Max error 1.4 mV, rms 0.5 mV.**
+- **Above the fit range** ([ONS] Fig. 5, not fitted; current read from tick labels, ±3 %): model
+  −4 mV at 20 mA, −10 mV at 50 mA, −30 mV at 100 mA. The pedals stay well below 10 mA (see the
+  operating currents below).
+- **Below the fit range (extrapolated):** 0.160 V at 100 nA, 0.061 V at 10 nA.
+- **Capacitance:** Cjo = 0.87 pF, M = 0.026 (VJ = 1 V, ngspice default), from [ONS] Fig. 7, p.4
+  (typical: 0.87 pF at 0 V, 0.81 pF at 15 V). The figure does not say which part variant it shows.
+  The p.2 table gives only maxima (4.0 pF for 914/4148).
+- **Not modelled:** reverse recovery (trr ≤ 4 ns max, p.2; irrelevant at audio frequencies), breakdown.
+
+### `DLED_RED` (Kingbright WP7113ID)
+
+- **Data:** typical I-V curve at 25 °C, [KB] p.3, "Forward Current vs. Forward Voltage", plus the
+  p.2 table (VF typ 1.9 V at 10 mA; the curve gives 1.902 V at 9.94 mA).
+- **Resolution:** the curve has linear axes (0–20 mA, 1.3–2.3 V). One PDF point = 0.22 mA and 10 mV,
+  so points below ~1 mA carry about ±0.1 mA uncertainty. **The lowest datasheet point is 0.107 mA;
+  everything below it is extrapolated.**
+- **Fit (0.1–10 mA, decision (b), where clipping LEDs operate):** Is = 9.417e-19 A, N = 1.837,
+  Rs = 17.12 Ω. **Max error 9.5 mV, rms 5.2 mV.**
+- **Above the fit range** (not fitted): +22 mV at 11.2 mA, +32 mV at 12.4 mA, +66 mV at 15 mA, +115 mV at 20 mA.
+- **Below the fit range (extrapolated):** 1.419 V at 10.7 µA, 1.310 V at 1.07 µA, 1.202 V at 0.107 µA.
+- **Not modelled:** capacitance (not in the datasheet), breakdown.
+- **Why (b):** a single-exponential model cannot follow this LED's curve over 0.1–20 mA. Fitting
+  the whole range leaves a systematic 25 mV error; fitting 0.1–10 mA gives 9.5 mV where it matters.
+
+**The extrapolation is not pinned down by the datasheet.** Fitting different parts of the curve
+gives very different low-current behaviour:
+
+| Fit range | Max error in range | V at 1 µA (extrapolated) |
+|---|---|---|
+| 1–20 mA | 11.3 mV | 0.962 V |
+| 0.1–20 mA | 24.8 mV | 1.230 V |
+| **0.1–10 mA (used)** | **9.5 mV** | **1.307 V** |
+
+### Operating currents in the pedals
+
+From `python -m scripts.diode_study`: default settings, 1 kHz, 300 mV pickup EMF. This uses our
+op-amp and fitted diode models, with the transistors still placeholders until step B. The current
+is computed from the simulated diode voltage with the fitted diode equation.
+
+| Block, D_clip | Peak current | Time <1 µA | 1–100 µA | 0.1–1 mA | >1 mA |
+|---|---|---|---|---|---|
+| od_ts808, si | 40.5 µA | 5 % | 95 % | 0 % | 0 % |
+| od_ts808, led | 31.7 µA | 18 % | 82 % | 0 % | 0 % |
+| dist_distplus, si | 201 µA | 4 % | 13 % | 83 % | 0 % |
+| dist_distplus, led | 105.5 µA | 15 % | 31 % | 54 % | 0 % |
+
+The TS-808 clipping diodes work at 1–100 µA, as estimated. The Distortion+ diodes work mostly at
+0.1–1 mA (op-amp swing of about ±2.5 V across R9 = 10 kΩ). **The TS-808 LEDs operate entirely below
+the lowest LED datasheet point (0.107 mA)**, so `D_clip=led` results in that block rest on the
+extrapolation.
+
+### LED sensitivity (low and high ends of the extrapolation range)
+
+`D_clip=led`, default settings; same model set as above.
+
+| Block | Metric | Low (0.962 V at 1 µA) | Mid (1.230 V) | Used (1.307 V) | Spread low→used |
+|---|---|---|---|---|---|
+| od_ts808 | gain_1k_db | 13.85 | 13.85 | 13.85 | 0 % |
+| | thd_pct | 10.13 | 10.70 | 10.89 | +7.5 % |
+| | out_pk_v | 0.508 | 0.562 | 0.574 | **+13 %** |
+| | even_odd | 0.0146 | 0.0150 | 0.0151 | +3 % |
+| dist_distplus | gain_1k_db | 5.879 | 5.879 | 5.879 | 0 % |
+| | thd_pct | 33.77 | 33.78 | 33.89 | +0.4 % |
+| | out_pk_v | 0.144 | 0.153 | 0.154 | +7 % |
+| | even_odd | 0.0599 | 0.0601 | 0.0601 | +0.3 % |
+
+`gain_1k_db` is a small-signal measurement (the diodes barely conduct), so it does not depend on
+the LED model. The uncertainty shows in the output level (up to 13 %) and THD (up to 7.5 %) of the
+TS-808. A datasheet with a logarithmic current axis, or measured LED data (option (c)), would
+remove it.
+
+**For reporting (decision 2026-11-16, option (b) accepted as is):** TS-808 results with
+`D_clip=led` carry roughly **±1 dB output-level uncertainty** (the +13 % spread in `out_pk_v` is
+20·log10(1.13) ≈ 1.06 dB) and about ±7.5 % THD uncertainty from the LED extrapolation below
+0.107 mA. Phase 3 should cite this when reporting LED-mode TS-808 results.
+
+### `DGE` (1N34A): UNVALIDATED placeholder
+
+- [TAI] is the only manufacturer datasheet found. It gives only a **maximum** forward voltage
+  (1.0 V at 5 mA), maximum reverse leakage and typical junction capacitance (0.8 pF), with no
+  I-V curve, so no fit was made (decision: option 4).
+- `DGE` stays the placeholder in `smoke_models.lib`, labelled there as unvalidated.
+  `dist_distplus/block.yaml` marks `D_clip: validated: {ge: false}`. Validate rejects it unless
+  `run.allow_unvalidated_models: true` in `config.yaml` (default false, for manual experiments
+  only), and the Planner's catalog does not offer it. **Phase 3 runs must exclude it** (keep the flag false).
+- **Possible future source (not used):** the retailer Tubes and More lists its own measured
+  forward voltages (about 338–450 mV) and a "Vf curves" image for new-old-stock 1N34A:
+  https://www.tubesandmore.com/products/diode-1n34a-germanium. These are retailer measurements,
+  not a datasheet; they would need to be recorded as such.
+
+### Diode model notes
+
+- ngspice simulates at 27 °C by default, and the fitted models are at Tnom = 25 °C. The
+  2 °C difference lowers silicon VF by about 4 mV (roughly −2 mV/°C), negligible here.
 
 ## Op-amp pin order (important)
 

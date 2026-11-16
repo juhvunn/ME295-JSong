@@ -1,0 +1,92 @@
+# Datasheet I-V points for the diode fits (scripts/fit_diodes.py -> models/diodes_fitted.lib).
+#
+# How the points were obtained: the curves in these PDFs are vector graphics. Their vertex
+# coordinates were extracted with PyMuPDF (page.get_drawings) and converted to amps/volts using
+# the plot's grid lines (or, where no grid lines exist, the frame and tick labels). Values are
+# read at round currents by interpolating the curve (log-current axis) or are the curve's own
+# vertices (linear axis). PDFs are not committed (copyright); the SHA-256 identifies the file read.
+#
+# fit_points:   typical curve points used for the fit
+# check_points: typical points outside the fitted range, reported only (not fitted)
+temperature_c: 25
+
+diodes:
+  D1N914:
+    part: "1N914 / 1N4148 small-signal silicon diode"
+    document: "onsemi, Small Signal Diode 1N91x, 1N4x48, FDLL914, FDLL4x48, publication 1N914/D, Rev. 6 (September 2024)"
+    url: "https://www.onsemi.com/pdf/datasheet/1n914-d.pdf"
+    sha256: "70b7437841e5ace17185a8630e6eb245322f5337d0f72408a3f37cb7cf4b0147"
+    fit_range: "1 uA - 10 mA (typical curves, Ta = 25 C)"
+    fit_points:
+      # Figure 3, p.3: "Forward Voltage vs. Forward Current, VF - 1 to 100 uA" (straight line on the plot)
+      - {I: 1.0e-6,  V: 0.2731, ref: "Fig. 3, p.3"}
+      - {I: 2.0e-6,  V: 0.3076, ref: "Fig. 3, p.3"}
+      - {I: 5.0e-6,  V: 0.3531, ref: "Fig. 3, p.3"}
+      - {I: 1.0e-5,  V: 0.3876, ref: "Fig. 3, p.3"}
+      - {I: 2.0e-5,  V: 0.4220, ref: "Fig. 3, p.3"}
+      - {I: 5.0e-5,  V: 0.4676, ref: "Fig. 3, p.3"}
+      - {I: 1.0e-4,  V: 0.5021, ref: "Fig. 3, p.3 (Fig. 4 gives 0.5001 V at the same current)"}
+      # Figure 4, p.3: "Forward Voltage vs. Forward Current, VF - 0.1 to 10 mA"
+      - {I: 2.0e-4,  V: 0.5353, ref: "Fig. 4, p.3"}
+      - {I: 5.0e-4,  V: 0.5822, ref: "Fig. 4, p.3"}
+      - {I: 1.0e-3,  V: 0.6175, ref: "Fig. 4, p.3"}
+      - {I: 2.0e-3,  V: 0.6528, ref: "Fig. 4, p.3"}
+      - {I: 5.0e-3,  V: 0.6996, ref: "Fig. 4, p.3"}
+      - {I: 1.0e-2,  V: 0.7350, ref: "Fig. 4, p.3"}
+    check_points:
+      # Figure 5, p.3: "VF - 10 to 800 mA" (no vertical grid lines: x mapped from tick labels, ~3 % current uncertainty)
+      - {I: 2.0e-2,  V: 0.778, ref: "Fig. 5, p.3"}
+      - {I: 5.0e-2,  V: 0.842, ref: "Fig. 5, p.3"}
+      - {I: 1.0e-1,  V: 0.916, ref: "Fig. 5, p.3"}
+    capacitance:
+      Cjo: 0.87e-12
+      M: 0.026
+      ref: >-
+        Fig. 7, p.4 "Total Capacitance" (typical, 25 C): 0.87 pF at 0 V, 0.81 pF at 15 V; M from
+        these two points with VJ = 1 V (ngspice default). The figure does not say which part
+        variant it shows; the table on p.2 gives only maxima (4.0 pF for 914/4148).
+    not_modelled: "reverse recovery (trr <= 4 ns max, p.2): irrelevant at audio frequencies; breakdown (>= 75-100 V)"
+
+  DLED_RED:
+    part: "Kingbright WP7113ID, 5 mm (T-1 3/4) High Efficiency Red LED (GaAsP on GaP)"
+    document: "Kingbright WP7113ID datasheet, Spec No. DSAF0012 / 1101005042, Rev No. V.14A, 01/08/2026"
+    url: "https://www.kingbrightusa.com/images/catalog/SPEC/WP7113ID.pdf"
+    sha256: "b5bb33f69c13fd92ab6d47a8fd71168b6e7ee685139c8f381957aeea9286c9da"
+    fit_range: "0.1 mA - 10 mA (typical curve, Ta = 25 C; points up to 20 mA reported only)"
+    resolution_note: >-
+      Linear axes 0-20 mA / 1.3-2.3 V: one PDF point = 0.22 mA and 10 mV. Points below ~1 mA are
+      within a few points of the zero line, so their currents are uncertain by about +-0.1 mA.
+      Everything below 0.107 mA is extrapolated.
+    fit_points:
+      # p.3, "Forward Current vs. Forward Voltage" (vertices of the drawn curve)
+      - {I: 0.107e-3, V: 1.5386, ref: "p.3 I-V curve (lowest vertex; +-0.1 mA)"}
+      - {I: 0.201e-3, V: 1.5586, ref: "p.3 I-V curve (+-0.1 mA)"}
+      - {I: 0.309e-3, V: 1.5786, ref: "p.3 I-V curve (+-0.1 mA)"}
+      - {I: 0.416e-3, V: 1.5986, ref: "p.3 I-V curve (+-0.1 mA)"}
+      - {I: 0.524e-3, V: 1.6086, ref: "p.3 I-V curve (+-0.1 mA)"}
+      - {I: 0.631e-3, V: 1.6235, ref: "p.3 I-V curve (+-0.1 mA)"}
+      - {I: 1.061e-3, V: 1.6485, ref: "p.3 I-V curve"}
+      - {I: 1.383e-3, V: 1.6679, ref: "p.3 I-V curve"}
+      - {I: 2.028e-3, V: 1.6979, ref: "p.3 I-V curve"}
+      - {I: 2.565e-3, V: 1.7179, ref: "p.3 I-V curve"}
+      - {I: 3.304e-3, V: 1.7478, ref: "p.3 I-V curve"}
+      - {I: 4.056e-3, V: 1.7778, ref: "p.3 I-V curve"}
+      - {I: 5.024e-3, V: 1.8028, ref: "p.3 I-V curve"}
+      - {I: 6.098e-3, V: 1.8272, ref: "p.3 I-V curve"}
+      - {I: 7.374e-3, V: 1.8572, ref: "p.3 I-V curve"}
+      - {I: 8.664e-3, V: 1.8821, ref: "p.3 I-V curve"}
+      - {I: 9.940e-3, V: 1.9021, ref: "p.3 I-V curve (table p.2: VF typ 1.9 V at 10 mA)"}
+    check_points:
+      # above the fit range (decision: fit 0.1-10 mA, where clipping LEDs operate); reported only
+      - {I: 11.229e-3, V: 1.9171, ref: "p.3 I-V curve"}
+      - {I: 12.411e-3, V: 1.9321, ref: "p.3 I-V curve"}
+      - {I: 14.976e-3, V: 1.9515, ref: "p.3 I-V curve"}
+      - {I: 20.000e-3, V: 2.0014, ref: "p.3 I-V curve (top of plot)"}
+    capacitance: null   # not given in the datasheet; not modelled (Cjo = 0)
+    not_modelled: "capacitance (not in datasheet), reverse breakdown"
+
+# DGE (germanium, 1N34A stand-in for the MXR's 1N270): NOT FITTED. The only manufacturer datasheet
+# found (Taitron 1N34A, Rev. A/AH, https://www.taitroncomponents.com/catalog/Datasheet/1N34A.pdf,
+# sha256 2f8cf1a1e92822a9c1921b8c934d944ca91d36ff9f33b6b06fd22de890ccd57c) gives only a MAXIMUM
+# forward voltage (1.0 V at 5 mA), maximum leakage and typical capacitance (0.8 pF). Waiting for a
+# decision on the data source (see models/README.md).

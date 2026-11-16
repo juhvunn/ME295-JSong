@@ -40,6 +40,8 @@ reach more specs than a fixed-topology parameter search and a single LLM?
 - Prefer deterministic checkers over LLM checkers.
 - Every Planner revision logs whether it changed topology or only values.
 - Any consequential action (export, git push, deleting files) requires my approval.
+- Phase 3 / reported results must not use unvalidated model choices (`validated: false` in block.yaml):
+  run.allow_unvalidated_models must stay false for them. Model sources and assumptions: models/README.md.
 - Verify the Checker on known circuits before trusting results: non-inverting op-amp gain (1+Rf/Rg), RC low-pass -3 dB at 1/(2*pi*R*C), pure sine THD ~ 0.
 
 ## Environment
