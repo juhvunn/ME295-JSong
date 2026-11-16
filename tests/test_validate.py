@@ -108,3 +108,9 @@ def test_planner_catalog_hides_unvalidated_choices():
     from pedal_agent.prompts import catalog
     distplus = next(b for b in catalog(include_typical=False) if b["id"] == "dist_distplus")
     assert distplus["params"]["D_clip"].startswith("choice ['si', 'led', 'none']")
+
+
+def test_component_at_range_edge_is_accepted():
+    # parse_value("22n") = 2.2000000000000002e-08; the E-series value 2.2e-08 is the same 22 nF
+    for v in (2.2e-8, "22n", 2.2e-7, "220n"):
+        assert validate(cand(("od_ts808", {"C3": v})), "initial_chain", None).ok

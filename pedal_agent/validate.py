@@ -15,6 +15,7 @@ from pedal_agent.config import load_config
 from pedal_agent.schemas import BlockInstance, Candidate
 
 MAX_CHAIN = 3
+FIXED_TOPOLOGY_MODES = {"baseline_fixed_topology", "random_fixed_topology", "random_fixed_topology_oracle"}
 
 E_SERIES = {
     "E6": [1.0, 1.5, 2.2, 3.3, 4.7, 6.8],
@@ -40,13 +41,17 @@ def block_ids() -> list[str]:
     return sorted(p.name for p in BLOCKS_DIR.iterdir() if (p / "block.yaml").is_file())
 
 
+def series_values(series: str, lo: float, hi: float) -> list[float]:
+    """All E-series values within [lo, hi], ascending."""
+    base = E_SERIES[series]
+    options = [float(f"{m * 10.0 ** d:.6g}") for d in range(math.floor(math.log10(lo)) - 1, math.ceil(math.log10(hi)) + 1)
+               for m in base]
+    return sorted(v for v in options if lo * (1 - 1e-9) <= v <= hi * (1 + 1e-9))
+
+
 def snap(value: float, series: str, lo: float, hi: float) -> float:
     """Nearest E-series value (log distance) within [lo, hi]."""
-    base = E_SERIES[series]
-    options = [m * 10.0 ** d for d in range(math.floor(math.log10(lo)) - 1, math.ceil(math.log10(hi)) + 1)
-               for m in base]
-    options = [v for v in options if lo * (1 - 1e-9) <= v <= hi * (1 + 1e-9)]
-    return min(options, key=lambda v: abs(math.log(v / value)))
+    return min(series_values(series, lo, hi), key=lambda v: abs(math.log(v / value)))
 
 
 def allow_unvalidated_default() -> bool:
@@ -93,7 +98,7 @@ def check_params(blk: BlockInstance, meta: dict, allow_unvalidated: bool = False
                 params[name] = x
         else:  # component
             lo, hi = parse_value(spec["min"]), parse_value(spec["max"])
-            if not lo <= x <= hi:
+            if not lo * (1 - 1e-9) <= x <= hi * (1 + 1e-9):   # tolerance: parse_value("22n") != 2.2e-8 exactly
                 errors.append(f"{where}={x:g}: outside [{spec['min']}, {spec['max']}]")
                 continue
             s = snap(x, spec["series"], lo, hi) if spec.get("series") else x
@@ -134,9 +139,8 @@ def validate(candidate: Candidate, claimed_action: str, previous_chain: list[str
         errors.append(f"each block may appear at most once; repeated: {dupes}")
 
     action = derive_action(previous_chain, ids)
-    if mode == "baseline_fixed_topology" and previous_chain is not None and ids != previous_chain:
-        errors.append(f"baseline_fixed_topology: the chain must stay {previous_chain}; "
-                      "only adjust_params is allowed")
+    if mode in FIXED_TOPOLOGY_MODES and previous_chain is not None and ids != previous_chain:
+        errors.append(f"{mode}: the chain must stay {previous_chain}; only adjust_params is allowed")
     elif claimed_action != action:
         warnings.append(f"action relabelled {claimed_action} -> {action} from the chain change")
 
