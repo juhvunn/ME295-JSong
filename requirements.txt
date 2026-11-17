@@ -11,3 +11,4 @@ jinja2
 langgraph-checkpoint-sqlite
 scipy
 streamlit
+claude-agent-sdk==0.2.183
