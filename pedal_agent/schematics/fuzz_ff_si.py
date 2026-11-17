@@ -23,7 +23,7 @@ def draw(s: Sketch) -> None:
     s.wire(c1, (c1[0], cy))
     s.two("R2", (c1[0], cy), "up", length=2.4, side="right")
     v1 = s.vcc((c1[0], cy + 2.4))
-    s.stage("Q1", ["C1", "Q1", "R2"], extra=[v1])
+    s.stage("Q1 input stage", ["C1", "Q1", "R2"], extra=[v1])
 
     # --- Q2: direct-coupled, collector load R4 + R5 (output taken at their junction) ---
     s.wire((c1[0], cy), (c1[0] + 3.4, cy))
@@ -35,7 +35,7 @@ def draw(s: Sketch) -> None:
     na = (c2[0], c2[1] + 2)
     s.two("R4", na, "up", side="right")
     v2 = s.vcc((na[0], na[1] + 2))
-    s.stage("Q2", ["Q2", "R5", "R4"], extra=[v2])
+    s.stage("Q2 output stage (output at R4/R5)", ["Q2", "R5", "R4"], extra=[v2])
 
     # --- R3: DC/AC feedback from Q2's emitter to Q1's base, below both stages ---
     fy = -3.0
@@ -45,7 +45,7 @@ def draw(s: Sketch) -> None:
     s.wire((rx + 2, fy), (e2n[0], fy), e2n)
 
     # --- fuzz (emitter pot, wiper bypassed by C2) and volume (output from the wiper) ---
-    px = e2n[0] + 4.6
+    px = e2n[0] + 5.6
     s.wire(e2n, (px, e2n[1]))
     fz = s.divider("R6", (px, e2n[1]), "down", a_end="start", length=2.4, side="left")
     s.gnd(xy(fz, "end"))

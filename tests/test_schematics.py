@@ -8,7 +8,7 @@ import pytest
 from pedal_agent.build import load_block, parse_value
 from pedal_agent.schematics import BLOCKS, check_drawing, draw, sketch
 from pedal_agent.schematics import od_ts808
-from pedal_agent.schematics.common import Sketch, value_text
+from pedal_agent.schematics.common import PART_NAME, Sketch, value_text
 
 
 def settings(block_id):
@@ -56,12 +56,34 @@ def test_check_catches_drawing_errors(name):
 
 
 def test_labels_are_the_simulated_values():
-    sk = sketch("od_ts808", {"drive": 0.8, "tone": 0.2, "C3": "100n", "D_clip": "led"})
-    assert sk.label_of("C3") == "C3\n100n" and sk.label_of("R9") == "R9\n10k" and sk.label_of("R22") == "R22\n1.5M"
-    assert value_text(sk.parts["R19"][3]) in sk.label_of("R19") and "drive 0.80" in sk.label_of("R19")
-    a, b = value_text(sk.parts["R20A"][3]), value_text(sk.parts["R20B"][3])
-    assert f"({a}/{b})" in sk.pot_label("R20") and parse_value(sk.parts["R20A"][3]) < parse_value(sk.parts["R20B"][3])
-    assert sk.label_of("D3") == "D3\nDLED_RED" and "D1" not in sk.parts
+    sk = sketch("od_ts808", {"drive": 0.8, "tone": 0.2, "level": 0.7, "C3": "100n", "D_clip": "led"})
+    lab, v = sk.labels, lambda d: value_text(sk.parts[d][3])
+    assert lab["C3"] == "C3\n100n" and lab["R9"] == "R9\n10k" and lab["R22"] == "R22\n1.5M"
+    assert lab["R19"] == f"R19 500k log\ndrive 0.80 (1 = max drive)\nset to {v('R19')}"
+    # one convention: segments named by their ends on the page, upper (or left) segment first
+    assert lab["R20"].endswith(f"left-wiper {v('R20A')} / wiper-right {v('R20B')}")      # R20A: t1 (left) - wiper
+    assert lab["R21"].endswith(f"top-wiper {v('R21B')}\nwiper-bottom {v('R21A')}")       # R21B: v1 (top) - wiper
+    assert v("R21B") == "30k" and v("R21A") == "70k"                                      # level 0.70, linear
+    assert lab["D3"] == "D3\nred LED" and lab["X1A"] == "JRC4558 (1/2)" and "D1" not in sk.parts
+    fz = sketch("fuzz_ff_si", {"fuzz": 0.9, "Q_model": "Q2N3904"})
+    assert "fuzz 0.90\n(1 = wiper at Q2 emitter, max fuzz)" in fz.labels["R6"]
+    assert fz.labels["R6"].endswith(f"top-wiper {value_text(fz.parts['R6A'][3])}\n"
+                                    f"wiper-bottom {value_text(fz.parts['R6B'][3])}")    # R6A: e2 (top) - wiper
+    assert fz.labels["Q1"] == "Q1\n2N3904"
+    ds = sketch("dist_distplus", {"gain": 0.8})
+    assert ds.labels["R7"] == f"R7 500k log\ngain 0.80 (1 = max gain)\nset to {value_text(ds.parts['R7'][3])}"
+    assert value_text(ds.parts["R7"][3]) == "8.8k"
+
+
+@pytest.mark.parametrize("block_id", BLOCKS)
+def test_every_model_has_a_readable_name(block_id):
+    """Drawings show part names, never SPICE model names, for every choice value."""
+    for params in settings(block_id):
+        sk = sketch(block_id, params)
+        for des in sk.parts:
+            if des[0] in "DQX":
+                model = sk.parts[des][3] if des[0] == "D" else sk.parts[des][4] if des[0] == "Q" else sk.parts[des][-1]
+                assert model in PART_NAME and PART_NAME[model] in sk.labels[des], (des, model)
 
 
 def test_shaded_parts_are_the_adjustable_ones():

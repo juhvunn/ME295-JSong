@@ -1,4 +1,4 @@
-"""dist_distplus schematic: bias, gain stage (input network + IC1), clipping, level (left to right)."""
+"""dist_distplus schematic: input and gain stage, clipping, level (left to right); bias above the clipping."""
 from pedal_agent.schematics.common import Sketch
 
 
@@ -8,18 +8,6 @@ def xy(e, anchor):
 
 
 def draw(s: Sketch) -> None:
-    # --- bias reference Vr = Vcc/2 ---
-    v = s.vcc((0, 4))
-    s.two("R2", (0, 4), "down", side="left")
-    s.two("R3", (0, 2), "down", side="left")
-    s.gnd((0, 0))
-    s.wire((0, 2), (1.6, 2))
-    s.two("C1", (1.6, 2), "down")
-    s.gnd((1.6, 0))
-    s.wire((1.6, 2), (2.8, 2))
-    s.vr((2.8, 2))
-    s.stage("Bias: Vr = Vcc/2", ["R2", "R3", "C1"], extra=[v])
-
     # --- gain stage: input network, non-inverting IC1, gain leg C4-R6-R7 to ground ---
     s.port("in", (5, 0))
     s.wire((5, 0), (6, 0))
@@ -53,7 +41,7 @@ def draw(s: Sketch) -> None:
     s.wire((mx, top), (mid - 1, top))
     s.two("R8", (mid - 1, top), "right")
     s.wire((mid + 1, top), (rx, top))
-    s.stage("Gain stage", ["R1", "C3", "C2", "R5", "R4", "X1", "C4", "R6", "R7", "C5", "R8"])
+    s.stage("Input and gain stage", ["R1", "C3", "C2", "R5", "R4", "X1", "C4", "R6", "R7", "C5", "R8"])
 
     # --- hard clipping to ground ---
     s.wire((rx, o[1]), (rx + 1.2, o[1]))
@@ -83,4 +71,6 @@ def draw(s: Sketch) -> None:
     w = xy(lvl, "tap")
     s.wire(w, (w[0] + 1.2, w[1]))
     s.port("out", (w[0] + 1.2, w[1]), loc="right")
-    s.stage("Level", ["R10"])
+    s.stage("Level", ["R10"], padx=0.9)
+
+    s.bias("R2", "R3", "C1", at=(rx + 2.6, o[1] + 3.2))     # in the empty space above the clipping stage

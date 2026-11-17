@@ -8,17 +8,7 @@ def xy(e, anchor):
 
 
 def draw(s: Sketch) -> None:
-    # --- bias reference Vr = Vcc/2 ---
-    v = s.vcc((0, 4))
-    s.two("R9", (0, 4), "down", side="left")
-    s.two("R10", (0, 2), "down", side="left")
-    s.gnd((0, 0))
-    s.wire((0, 2), (1.6, 2))
-    s.two("C7", (1.6, 2), "down")
-    s.gnd((1.6, 0))
-    s.wire((1.6, 2), (2.8, 2))
-    s.vr((2.8, 2))
-    s.stage("Bias: Vr = Vcc/2", ["R9", "R10", "C7"], extra=[v])
+    s.bias("R9", "R10", "C7", at=(7.0, 4.2))            # above the input buffer
 
     # --- input buffer (Q1 emitter follower) ---
     s.port("in", (5, 0))
