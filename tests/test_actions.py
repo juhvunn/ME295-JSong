@@ -79,6 +79,8 @@ def test_live_flow_create_approve_feedback_accept(tmp_path):
     run = store.load(run_id)
     assert run.status == "accepted" and run.steps[-1].action == "human_accept" and actions.active(store) is None
     out = actions.export_design(run_id, store=store)
+    drawings = {f"schematic_{i}_{b.block_id}.{x}" for i, b in enumerate(run.best.candidate.chain, start=1)
+                for x in ("svg", "png")}
     assert out == actions.export_folder(run_id, store) and {f.name for f in out.iterdir()} == \
-        {"netlist.cir", "bom.csv", "summary.md"}
+        {"netlist.cir", "bom.csv", "summary.md"} | drawings
     assert (out / "summary.md").read_text(encoding="utf-8").startswith("# Exported design: Jazz Christmas")

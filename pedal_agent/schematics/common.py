@@ -12,6 +12,7 @@ supply pins are not drawn (they are always vcc and gnd; the test checks that in 
 from __future__ import annotations
 
 import re
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -355,6 +356,11 @@ class Sketch:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.d.save(str(path), transparent=False, dpi=dpi)
         return path
+
+    def image(self, fmt: str = "png", dpi: int = 150) -> bytes:
+        """The finished drawing as PNG or SVG bytes (same output as save())."""
+        with tempfile.TemporaryDirectory() as tmp:
+            return self.save(Path(tmp) / f"schematic.{fmt}", dpi=dpi).read_bytes()
 
 
 def _loc(direction: str, side: str | None) -> str:

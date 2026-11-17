@@ -44,7 +44,7 @@ Human review points: spec approval, feedback/accept. The graph must pause there
 | `approve_spec(run_id, edited_targets=None)` | stores approved `TargetSpec`, resumes graph |
 | `send_feedback(run_id, text)` | appends feedback step, resumes Planner |
 | `accept(run_id)` | `status=accepted`, triggers audio render |
-| `export_design(run_id)` | accepted runs only, on the user's click: `exports/<run_id>/` with `netlist.cir` (the exact simulated netlist, SHA-256 checked against the Checker report; refused if it no longer reproduces), `bom.csv` (signal-path parts per block, pots with knob setting) and `summary.md`; never overwrites (`pedal_agent/export.py`) |
+| `export_design(run_id)` | accepted runs only, on the user's click: `exports/<run_id>/` with `netlist.cir` (the exact simulated netlist, SHA-256 checked against the Checker report; refused if it no longer reproduces), `bom.csv` (signal-path parts per block, pots with knob setting), `schematic_<n>_<block>.svg/.png` per block (pedal_agent/schematics, connections checked against the netlist, subcircuit verbatim in `netlist.cir`) and `summary.md`; never overwrites (`pedal_agent/export.py`) |
 | `render_audio(run_id, clip)` | Phase 6 |
 
 ## 4. Fixed choices

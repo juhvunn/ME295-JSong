@@ -61,8 +61,25 @@ def test_export_writes_the_simulated_netlist_bom_and_summary(tmp_path, report):
     assert "# Exported design: Crunch test" in summary and report.netlist_sha256 in summary
     assert "C4 = 68n" in summary and "C3 = 47n (default)" in summary and "| Gain at 1 kHz |" in summary
     assert "bypass switching" in summary and "not built or listened to" in summary.replace("\n", " ")
+    for i, b in enumerate(CHAIN, start=1):                                     # one schematic per block, SVG + PNG
+        svg, png = out / f"schematic_{i}_{b.block_id}.svg", out / f"schematic_{i}_{b.block_id}.png"
+        assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n" and b"<svg" in svg.read_bytes()[:2000]
+        assert f"`{svg.name}`" in summary and f"`{png.name}`" in summary
+    assert b"<!-- drive 0.80 (1 = max drive) -->" in (out / "schematic_1_od_ts808.svg").read_bytes()   # glyph comment
     with pytest.raises(FileExistsError):                                       # never overwritten
         export.export_run(run.run_id, store)
+
+
+def test_export_without_a_matching_schematic_still_exports_and_says_so(tmp_path, report, monkeypatch):
+    store, run = accepted_run(tmp_path, report)
+
+    def broken(block_id, params):
+        raise export.schematics.DrawingMismatch(f"{block_id}: node m1 is drawn as 2 separate nets")
+    monkeypatch.setattr(export.schematics, "images", broken)
+    out = export.export_run(run.run_id, store)
+    assert not list(out.glob("schematic_*")) and (out / "netlist.cir").exists()
+    summary = (out / "summary.md").read_text(encoding="utf-8")
+    assert "block 1 `od_ts808`: no schematic (od_ts808: node m1 is drawn as 2 separate nets)" in summary
 
 
 def test_export_refuses_unaccepted_runs_and_changed_netlists(tmp_path, report):

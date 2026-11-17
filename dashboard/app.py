@@ -6,8 +6,10 @@ only the backend actions in pedal_agent/actions.py (create project, approve/reje
 The agent runs in a worker process; while it works, the page re-reads the run file every 2 s.
 One active run at a time (actions lock). Illustrative examples and benchmark runs are read-only.
 LLM: real by default; PEDAL_DASHBOARD_LLM=fake for a demo without API use; PEDAL_RUNS_DIR for another
-runs folder. Block schematic and demo sound are placeholders (Phases 4 and 6).
+runs folder. Block schematics come from pedal_agent/schematics (Phase 4); the demo sound is a placeholder (Phase 6).
 """
+import base64
+import json
 import os
 import sys
 import time
@@ -20,7 +22,7 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from dashboard import data  # noqa: E402
-from pedal_agent import actions  # noqa: E402
+from pedal_agent import actions, schematics  # noqa: E402
 from pedal_agent.config import REPO_ROOT, load_config  # noqa: E402
 
 BLUE, ORANGE, ORANGE_LIGHT = "#2a78d6", "#eb6834", "#fde9df"
@@ -73,6 +75,32 @@ def ngspice() -> str:
 @st.cache_data(show_spinner=False)
 def library() -> dict:
     return data.library()
+
+
+@st.cache_data(show_spinner="Drawing schematic…", max_entries=64)
+def schematic(block_id: str, params_json: str) -> dict:
+    """PNG/SVG of a block at these settings (pedal_agent/schematics; connections checked against the netlist)."""
+    return schematics.images(block_id, json.loads(params_json))
+
+
+def show_schematic(pos: int, block_id: str, params: dict, n: int) -> None:
+    """Fitted to the column; full size in an expander (scrolls sideways) and as PNG/SVG downloads."""
+    try:
+        img = schematic(block_id, json.dumps(params, sort_keys=True))
+    except (KeyError, schematics.DrawingMismatch) as e:
+        st.warning(f"No schematic shown: {e}")
+        return
+    st.image(img["png"], width="stretch")
+    c1, c2 = st.columns(2)
+    name = f"schematic_{pos}_{block_id}_step{n}"
+    c1.download_button("Download PNG", img["png"], file_name=f"{name}.png", mime="image/png",
+                       on_click="ignore", width="stretch", key=f"png-{pos}-{n}")
+    c2.download_button("Download SVG", img["svg"], file_name=f"{name}.svg", mime="image/svg+xml",
+                       on_click="ignore", width="stretch", key=f"svg-{pos}-{n}")
+    with st.expander("Full size"):
+        b64 = base64.b64encode(img["png"]).decode()
+        st.markdown(f"<div style='overflow-x:auto'><img src='data:image/png;base64,{b64}' style='max-width:none'></div>",
+                    unsafe_allow_html=True)
 
 
 def card(title: str, body: str = "") -> None:
@@ -242,12 +270,10 @@ with center:
          f"<span class='arrow'>→</span><div class='node'>{esc(data.amp_text())}</div></div>"
          f"<div class='muted' style='margin-top:6px'>Highlighted knob values were set by the agent; others are block defaults.</div>")
 
-    for b in step.candidate.chain:
+    for i, b in enumerate(step.candidate.chain, start=1):
         with st.container(border=True):
-            st.markdown(f"**Block schematic** · `{b.block_id}`")
-            st.markdown("<div class='muted' style='border:1px dashed #d6d5cf; border-radius:8px; padding:24px; "
-                        "text-align:center'>Schematic placeholder (Phase 4: blocks/&lt;id&gt;/schematic.py)</div>",
-                        unsafe_allow_html=True)
+            st.markdown(f"**Block schematic** · {i}/{len(step.candidate.chain)} · `{b.block_id}` · step {step.n}")
+            show_schematic(i, b.block_id, b.params, step.n)
             st.markdown("**Component list**")
             comps = pd.DataFrame(data.components(b.block_id, b.params))
             styled = comps[["designator", "kind", "value", "parameter", "note"]].style.apply(

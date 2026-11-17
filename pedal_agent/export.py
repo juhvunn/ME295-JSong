@@ -1,9 +1,11 @@
-"""Export an accepted design: exports/<run_id>/{netlist.cir, bom.csv, summary.md}.
+"""Export an accepted design: exports/<run_id>/{netlist.cir, bom.csv, summary.md, schematic_<n>_<block>.svg/.png}.
 
 Only for runs the human accepted; the exported design is the run's best step (the one shown for review).
 netlist.cir is the exact netlist the Checker simulated: it is rebuilt from the candidate and must match the
 SHA-256 recorded in that step's CheckReport, otherwise the export is refused (blocks or models changed since).
 bom.csv lists the parts of the simulated signal path, read from the rendered block subcircuits.
+The schematics (pedal_agent/schematics) are drawn from the same parameters; each is exported only if its
+connections match its netlist and its rendered subcircuit appears verbatim in netlist.cir.
 An existing export is never overwritten.
 
     python -m pedal_agent.export <run_id> [--runs-dir DIR]
@@ -16,6 +18,7 @@ import re
 from pathlib import Path
 
 from pedal_agent.build import load_block, parse_value, render, taper
+from pedal_agent import schematics
 from pedal_agent.checker import build_netlist
 from pedal_agent.graph import RunStore
 from pedal_agent.harness import LOAD, PICKUP, VCC
@@ -115,7 +118,24 @@ def _excluded(block_id: str) -> str:
     return m.group(1).strip() if m else "not stated"
 
 
-def summary_md(run: RunRecord, sha: str, project_name: str | None) -> str:
+def schematic_files(chain: list[BlockInstance], net: str) -> tuple[dict[str, bytes], list[str]]:
+    """{file name: bytes} of the block schematics, and notes on any block left without one."""
+    files, notes = {}, []
+    for i, b in enumerate(chain, start=1):
+        try:
+            img = schematics.images(b.block_id, b.params)
+        except (KeyError, schematics.DrawingMismatch) as e:
+            notes.append(f"block {i} `{b.block_id}`: no schematic ({e})")
+            continue
+        if img["netlist"] not in net:
+            notes.append(f"block {i} `{b.block_id}`: no schematic (its subcircuit is not the one in netlist.cir)")
+            continue
+        for fmt in ("svg", "png"):
+            files[f"schematic_{i}_{b.block_id}.{fmt}"] = img[fmt]
+    return files, notes
+
+
+def summary_md(run: RunRecord, sha: str, project_name: str | None, schematic_names=(), schematic_notes=()) -> str:
     step = run.best
     rep = step.report
     measured = {r.name: r for r in rep.results}
@@ -153,8 +173,11 @@ def summary_md(run: RunRecord, sha: str, project_name: str | None) -> str:
     L += [f"- `{f.path}` ({f.status}), SHA-256 `{f.sha256[:16]}…`" for f in rep.model_files]
     L += ["", "## Files", "",
           "- `netlist.cir`: the exact ngspice netlist simulated (pickup model, blocks, 1 MΩ load, analyses).",
-          "- `bom.csv`: parts of the simulated signal path, per block; pots with their knob setting.", "",
-          "## Not included", ""]
+          "- `bom.csv`: parts of the simulated signal path, per block; pots with their knob setting."]
+    L += [f"- `{n}`: block schematic, drawn from the same values (connections checked against the netlist)."
+          for n in schematic_names]
+    L += [f"- {n}" for n in schematic_notes]
+    L += ["", "## Not included", ""]
     L += [f"- `{b.block_id}`: {_excluded(b.block_id)}" for b in step.candidate.chain]
     L += ["- Power supply filtering and protection, enclosure, wiring.", "",
           "This design was only simulated (preamp/overdrive path, ngspice, fitted models). It was not built "
@@ -184,10 +207,14 @@ def export_run(run_id: str, store: RunStore | None = None, project_name: str | N
     w = csv.DictWriter(buf, fieldnames=BOM_COLUMNS, lineterminator="\n")
     w.writeheader()
     w.writerows(rows)
+    drawings, notes = schematic_files(step.candidate.chain, net)
     out.mkdir(parents=True)
     (out / "netlist.cir").write_bytes(net.encode())                      # byte-identical to the simulated text
     (out / "bom.csv").write_text(buf.getvalue(), encoding="utf-8-sig", newline="")   # BOM so Excel reads Ω
-    (out / "summary.md").write_text(summary_md(run, sha, project_name), encoding="utf-8", newline="\n")
+    for name, data in drawings.items():
+        (out / name).write_bytes(data)
+    (out / "summary.md").write_text(summary_md(run, sha, project_name, list(drawings), notes),
+                                    encoding="utf-8", newline="\n")
     return out
 
 

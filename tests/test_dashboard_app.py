@@ -27,6 +27,10 @@ def test_example_run_page_renders_with_illustrative_badge():
     assert "Highlighted rows are parameters the agent can change." in [c.value for c in at.caption]
     assert all(b.disabled for b in at.button if b.label in ("Send to Planner", "Accept design"))   # example: read-only
     assert "Read-only: illustrative example." in [c.value for c in at.caption]
+    blocks = data.load_run(example["path"]).best.candidate.chain           # one schematic per block, no placeholder
+    assert [b.proto.label for b in at.get("download_button")] == ["Download PNG", "Download SVG"] * len(blocks)
+    assert [e.label for e in at.expander].count("Full size") == len(blocks) and not at.warning
+    assert "Schematic placeholder" not in text
 
 
 def test_real_project_run_has_no_illustrative_badge():
