@@ -96,8 +96,8 @@ with left:
     with st.container(border=True):
         st.markdown("**Saved circuits**")
         idx = index()
-        source = st.radio("Show", ["Examples", "Benchmark runs"], horizontal=True, label_visibility="collapsed")
-        rows = [e for e in idx if (e["set"] is None) == (source == "Examples")]
+        source = st.radio("Show", ["Projects", "Benchmark runs"], horizontal=True, label_visibility="collapsed")
+        rows = [e for e in idx if (e["set"] is None) == (source == "Projects")]
         if source == "Benchmark runs" and rows:
             f1, f2 = st.columns(2)
             mode = f1.selectbox("Method", sorted({e["mode"] for e in rows}))
@@ -109,7 +109,7 @@ with left:
             st.caption("No runs found.")
             st.stop()
         label = (lambda e: f"seed {e['seed']} · {e['chain']} · {e['n_pass']}/{e['n_targets']}") \
-            if source == "Benchmark runs" else (lambda e: f"{e['name']} · {e['chain']} · {e['n_pass']}/{e['n_targets']}")
+            if source == "Benchmark runs" else (lambda e: f"{e['name']} · {e['chain']} · {e['n_pass']}/{e['n_targets']}" + (" · ⚑ illustrative" if e['illustrative'] else ""))
         chosen = st.radio("Run", rows, format_func=label, label_visibility="collapsed")
         st.caption(f"{len(idx)} runs indexed")
 

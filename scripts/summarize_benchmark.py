@@ -82,8 +82,19 @@ def by_group(runs, source):
     return g
 
 
-def success_table(title, groups, methods):
-    L = [f"## {title}", "", "Success rate (successful runs / runs).", "",
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95 % Wilson score interval for k successes in n runs (fractions)."""
+    if n == 0:
+        return 0.0, 0.0
+    p = k / n
+    c = (p + z * z / (2 * n)) / (1 + z * z / n)
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / (1 + z * z / n)
+    return max(0.0, c - h), min(1.0, c + h)
+
+
+def success_table(title, groups, methods, ci=False):
+    note = "Success rate (successful runs / runs" + (", 95 % Wilson interval)." if ci else ").")
+    L = [f"## {title}", "", note, "",
          "| Group | " + " | ".join(SHORT[m] for m in methods) + " |", "|---|" + "---|" * len(methods)]
     for grp in GROUPS:
         if grp not in groups:
@@ -92,8 +103,47 @@ def success_table(title, groups, methods):
         for m in methods:
             rs = groups[grp].get(m, [])
             k = sum(map(success, rs))
-            cells.append(f"{100 * k / len(rs):.0f} % ({k}/{len(rs)})" if rs else "–")
+            if not rs:
+                cells.append("–")
+                continue
+            cell = f"{100 * k / len(rs):.0f} % ({k}/{len(rs)})"
+            if ci:
+                lo, hi = wilson(k, len(rs))
+                cell += f" [{100 * lo:.0f}–{100 * hi:.0f}]"
+            cells.append(cell)
         L.append(f"| {grp} | " + " | ".join(cells) + " |")
+    return L + [""]
+
+
+def two_block_chains(r: RunRecord) -> list[tuple[str, ...]]:
+    """Ordered 2-block chains this run simulated (start step included)."""
+    return [tuple(b.block_id for b in s.candidate.chain) for s in r.steps
+            if s.report is not None and s.candidate is not None and len(s.candidate.chain) == 2]
+
+
+def order_table(runs: list[RunRecord], methods, solution_chain: dict[str, str], title: str) -> list[str]:
+    """How often the same two blocks were tried in both orders; for C targets, whether the solution's order
+    (from the analysis file) or only the reversed order was tried."""
+    L = [f"## {title}", "",
+         "Runs that simulated at least one 2-block chain; of those, runs that tried the same two blocks in both "
+         "orders. C targets: runs that tried the solution's order vs only the reversed order (solution chain from "
+         "the analysis file).", "",
+         "| Method | Runs | With a 2-block chain | Both orders of a pair | C runs | C: solution order tried | "
+         "C: only reversed order tried |", "|---|---|---|---|---|---|---|"]
+    for m in methods:
+        rs = [r for r in runs if r.mode == m]
+        if not rs:
+            continue
+        with2 = [r for r in rs if two_block_chains(r)]
+        both = [r for r in with2 if any((b, a) in set(two_block_chains(r)) for a, b in two_block_chains(r))]
+        c_runs = [r for r in rs if r.benchmark.category == "C" and r.benchmark.target_id in solution_chain]
+        sol_tried = rev_only = 0
+        for r in c_runs:
+            sol = tuple(solution_chain[r.benchmark.target_id].split(" -> "))
+            tried = set(two_block_chains(r))
+            sol_tried += sol in tried
+            rev_only += sol not in tried and tuple(reversed(sol)) in tried
+        L.append(f"| {SHORT[m]} | {len(rs)} | {len(with2)} | {len(both)} | {len(c_runs)} | {sol_tried} | {rev_only} |")
     return L + [""]
 
 
@@ -198,15 +248,27 @@ def main(argv=None) -> int:
          f"Infrastructure errors left out (re-run): {len(infra)}"
          + (" (" + ", ".join(f"{r.benchmark.target_id}/{r.mode}/seed {r.seed}" for r in infra) + ")" if infra else "")
          + ".", ""]
-    L += success_table("Full set", full, methods)
+    commits = defaultdict(lambda: defaultdict(int))     # method -> commit (+ modified) -> runs
+    for r in runs:
+        key = "not recorded" if r.code_commit is None else r.code_commit[:10] + (" (modified)" if r.code_dirty else "")
+        commits[r.mode][key] += 1
+    L += ["Code commits per method (runs): " + "; ".join(
+        f"{SHORT[m]}: " + ", ".join(f"{c} ×{n}" for c, n in commits[m].items()) for m in methods if m in commits), ""]
+    L += success_table("Full set", full, methods, ci=True)
     if subset:
-        L += success_table(f"Subset view ({len(subset)} targets: {', '.join(sorted(subset))}); random methods "
-                           "filtered from their full-set runs", sub, methods)
+        L += success_table(f"Subset view ({len(subset)} targets: {', '.join(sorted(subset))}); all methods on exactly "
+                           "these targets (random methods filtered from their full-set runs)", sub, methods, ci=True)
     if defaults_pass:
         L += c_split_table("C split (full set)", runs, methods, defaults_pass)
         if subset:
             L += c_split_table("C split (subset)", [r for r in runs if r.benchmark.target_id in subset], methods,
                                defaults_pass)
+    solution_chain = ({tid: v["chain"] for tid, v in yaml.safe_load(flag_file.read_text(encoding="utf-8"))["targets"].items()}
+                      if flag_file.exists() else {})
+    L += order_table(runs, methods, solution_chain, "Block order, full set (2-block chains)")
+    if subset:
+        L += order_table([r for r in runs if r.benchmark.target_id in subset], methods, solution_chain,
+                         "Block order, subset (2-block chains)")
     L += details_table("Details (full set)", full, methods)
 
     per = defaultdict(dict)

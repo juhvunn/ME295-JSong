@@ -145,6 +145,7 @@ def test_usage_limit_stops_the_batch_cleanly_and_the_token_is_nowhere(tmp_path, 
     fn = StandIn(*[limited] * 4)
     monkeypatch.setattr(llm_mod, "make_real_llm",
                         lambda cfg=None: ClaudeSDKLLM(CFG, query_fn=fn, token=TOKEN, sleep=lambda s: None))
+    monkeypatch.setattr(run_benchmark, "code_version", lambda: ("c" * 40, False))   # as if committed
     rc = run_benchmark.main(["--method", "agent", "--llm", "real", "--targets", "G01,G02", "--seeds", "1",
                              "--out", str(tmp_path)], input_fn=lambda _: "yes")
     out = capsys.readouterr().out

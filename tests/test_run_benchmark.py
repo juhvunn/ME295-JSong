@@ -47,6 +47,7 @@ def test_real_llm_needs_typed_yes_and_makes_no_call_otherwise(monkeypatch, tmp_p
     def no_client(*a, **k):
         raise AssertionError("AnthropicLLM constructed")
     monkeypatch.setattr(llm_mod, "AnthropicLLM", no_client)
+    monkeypatch.setattr(run_benchmark, "code_version", lambda: ("c" * 40, False))   # as if committed
     rc = run_benchmark.main(["--method", "agent", "--llm", "real", "--targets", "G01", "--seeds", "2",
                              "--out", str(tmp_path)], input_fn=lambda _: "no")
     out = capsys.readouterr().out
@@ -106,3 +107,50 @@ def test_runner_writes_records_resumes_and_summarizes(tmp_path):
     runs = summarize_benchmark.load_runs(tmp_path / "runs")
     assert {r.mode for r in runs} == {"random_catalog", "random_fixed_topology_oracle", "agent"}
     assert all(r.model_id in ("none", "fake") and r.cost_usd == 0 for r in runs)
+    assert all(r.code_commit and len(r.code_commit) == 40 and r.code_dirty is not None for r in runs)
+    assert "Code commits per method" in text and "Block order, full set" in text
+
+
+SUBSET = run_benchmark.select_targets(TARGETS, "subset", "v1")
+S_REPEATS = "A=3,B=5,C=5,D=2,hand=3"
+
+
+def test_repeats_per_category_on_the_subset():
+    reps = run_benchmark.parse_repeats(S_REPEATS)
+    seeds = run_benchmark.seeds_per_target(SUBSET, 1, 99, reps)
+    by = {t["id"]: t for t in SUBSET}
+    for tid, s in seeds.items():
+        t = by[tid]
+        assert s == list(range(1, 1 + reps["hand" if t["source"] == "hand" else t["category"]]))
+    todo = run_benchmark.plan_runs("v1", "agent", SUBSET, seeds, set())
+    assert len(todo) == 2 * 3 + 4 * 5 + 4 * 5 + 1 * 2 + 1 * 3 == 51
+    assert len(run_benchmark.plan_runs("v1", "agent", SUBSET, seeds, {("G18", 1), ("G18", 2)})) == 49   # resume
+    assert run_benchmark.seeds_per_target(SUBSET, 1, 4, None)["G18"] == [1, 2, 3, 4]               # --seeds as before
+    assert run_benchmark.seeds_per_target(SUBSET, 1, 4, {"B": 2})["G18"] == []                      # missing key = 0
+    with pytest.raises(SystemExit):
+        run_benchmark.parse_repeats("A=3,X=2")
+
+
+def test_real_batch_refused_when_code_is_modified(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(run_benchmark, "code_version", lambda: ("c" * 40, True))
+    rc = run_benchmark.main(["--method", "agent", "--llm", "real", "--targets", "subset", "--repeats", S_REPEATS,
+                             "--out", str(tmp_path)], input_fn=lambda _: pytest.fail("gate must not be reached"))
+    assert rc == 1 and "Refusing a real-LLM batch" in capsys.readouterr().out
+
+
+def test_wilson_interval():
+    lo, hi = summarize_benchmark.wilson(10, 20)
+    assert lo == pytest.approx(0.299, abs=1e-3) and hi == pytest.approx(0.701, abs=1e-3)
+    assert summarize_benchmark.wilson(0, 20)[0] == 0 and summarize_benchmark.wilson(0, 20)[1] == pytest.approx(0.161, abs=1e-3)
+
+
+def test_block_order_table():
+    def step(chain):
+        return SimpleNamespace(report=object(), candidate=SimpleNamespace(chain=[SimpleNamespace(block_id=b) for b in chain]))
+    R = lambda tid, *chains: SimpleNamespace(  # noqa: E731
+        mode="agent", benchmark=SimpleNamespace(target_id=tid, category="C"), steps=[step(c) for c in chains])
+    runs = [R("G25", ["od_ts808"], ["dist_distplus", "od_ts808"], ["od_ts808", "dist_distplus"]),   # both orders
+            R("G25", ["od_ts808"], ["dist_distplus", "od_ts808"]),                                   # reversed only
+            R("G25", ["od_ts808"])]
+    rows = "\n".join(summarize_benchmark.order_table(runs, ["agent"], {"G25": "od_ts808 -> dist_distplus"}, "t"))
+    assert "| agent | 3 | 2 | 1 | 3 | 1 | 1 |" in rows

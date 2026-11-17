@@ -105,7 +105,20 @@ def planner_for(method: str, seed: int, chain: list[str], llm):
     return llm
 
 
-def run_one(version: str, t: dict, method: str, seed: int, store: RunStore, llm=None, oracle_chain=None):
+def code_version() -> tuple[str, bool]:
+    """(git commit, dirty): dirty = tracked files differ from that commit (untracked files ignored)."""
+    import subprocess
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO_ROOT,
+                                    capture_output=True, text=True).stdout.strip())
+    except OSError:
+        return "unknown", True
+    return commit or "unknown", dirty
+
+
+def run_one(version: str, t: dict, method: str, seed: int, store: RunStore, llm=None, oracle_chain=None,
+            code: tuple[str, bool] | None = None):
     chain = list(oracle_chain) if method == "random_fixed_topology_oracle" else START
     planner = planner_for(method, seed, chain, llm)
     agent = Agent(planner, store)
@@ -114,20 +127,44 @@ def run_one(version: str, t: dict, method: str, seed: int, store: RunStore, llm=
                            start_chain=[BlockInstance(block_id=b) for b in chain])
         spec = TargetSpec(goal_text=t["label"], targets=[MetricTarget(**x) for x in t["targets"]])
         run = new_benchmark_run(spec, ref, planner, mode=method, seed=seed)
+        if code:
+            run.code_commit, run.code_dirty = code
         agent.start(run)
     finally:
         agent.close()
     return store.load(run.run_id)
 
 
-def plan_runs(version: str, method: str, targets: list[dict], seeds: list[int], done: set) -> list[tuple]:
+def parse_repeats(text: str) -> dict[str, int]:
+    """'A=3,B=5,C=5,D=2,hand=3' -> repeats per generated category and for hand-written targets."""
+    out = {}
+    for part in text.split(","):
+        key, _, n = part.partition("=")
+        key = key.strip()
+        if key not in ("A", "B", "C", "D", "hand") or not n.strip().isdigit():
+            raise SystemExit(f"--repeats: bad entry {part!r} (use e.g. A=3,B=5,C=5,D=2,hand=3)")
+        out[key] = int(n)
+    return out
+
+
+def seeds_per_target(targets: list[dict], first_seed: int, n_seeds: int, repeats: dict | None) -> dict[str, list[int]]:
+    """Seeds for each target: n_seeds for all, or by category / hand with --repeats (missing key = 0)."""
+    def n(t):
+        return n_seeds if repeats is None else repeats.get("hand" if t["source"] == "hand" else t["category"], 0)
+    return {t["id"]: list(range(first_seed, first_seed + n(t))) for t in targets}
+
+
+def plan_runs(version: str, method: str, targets: list[dict], seeds: list[int] | dict[str, list[int]],
+              done: set) -> list[tuple]:
+    """(target, seed, oracle chain) still to run; seeds is one list for all targets or a list per target id."""
     oracle = {}
     if method == "random_fixed_topology_oracle":
         sol = read_solutions(version)
         oracle = {t["id"]: [b["block_id"] for b in sol[t["id"]]["chain"]] for t in targets
                   if t["source"] == "generated" and "chain" in sol.get(t["id"], {})}
         targets = [t for t in targets if t["id"] in oracle]
-    return [(t, s, oracle.get(t["id"])) for t in targets for s in seeds if (t["id"], s) not in done]
+    by_t = seeds if isinstance(seeds, dict) else {t["id"]: seeds for t in targets}
+    return [(t, s, oracle.get(t["id"])) for t in targets for s in by_t.get(t["id"], []) if (t["id"], s) not in done]
 
 
 def main(argv=None, input_fn=input) -> int:
@@ -137,6 +174,7 @@ def main(argv=None, input_fn=input) -> int:
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--first-seed", type=int, default=1)
     ap.add_argument("--targets", default="all")
+    ap.add_argument("--repeats", help="repeats per category instead of --seeds, e.g. A=3,B=5,C=5,D=2,hand=3")
     ap.add_argument("--llm", choices=["fake", "real"], default="fake")
     ap.add_argument("--out")
     args = ap.parse_args(argv)
@@ -144,11 +182,17 @@ def main(argv=None, input_fn=input) -> int:
     out_dir = Path(args.out) if args.out else REPO_ROOT / "runs" / "bench" / args.version / args.method
     out_dir.mkdir(parents=True, exist_ok=True)
     targets = select_targets(load_set(args.version), args.targets, args.version)
-    seeds = list(range(args.first_seed, args.first_seed + args.seeds))
+    repeats = parse_repeats(args.repeats) if args.repeats else None
+    seeds = seeds_per_target(targets, args.first_seed, args.seeds, repeats)
     todo = plan_runs(args.version, args.method, targets, seeds, finished(out_dir))
-    print(f"{args.method}: {len(todo)} runs to do (targets {len(targets)}, seeds {seeds[0]}-{seeds[-1]}), "
-          f"at most {len(todo) * cfg['run']['sim_budget']} sims, "
-          f"about {len(todo) * cfg['run']['sim_budget'] * SECONDS_PER_SIM / 60:.0f} min worst case; out: {out_dir}")
+    code = code_version()
+    print(f"{args.method}: {len(todo)} runs to do (targets {len(targets)}, "
+          f"{'repeats ' + args.repeats if repeats else f'seeds {args.first_seed}-{args.first_seed + args.seeds - 1}'}), "
+          f"at most {len(todo) * cfg['run']['sim_budget']} sims; code {code[0][:10]}{' (modified)' if code[1] else ''}; "
+          f"out: {out_dir}")
+    if args.method in AGENT_METHODS and args.llm == "real" and code[1]:
+        print("Refusing a real-LLM batch: tracked files differ from the commit (the evaluated code must be committed).")
+        return 1
 
     llm = None
     if args.method in AGENT_METHODS:
@@ -167,7 +211,7 @@ def main(argv=None, input_fn=input) -> int:
     for i, (t, seed, oracle_chain) in enumerate(todo, 1):
         run_llm = fake_llm() if args.method in AGENT_METHODS and args.llm == "fake" else llm
         try:
-            rec = run_one(args.version, t, args.method, seed, store, run_llm, oracle_chain)
+            rec = run_one(args.version, t, args.method, seed, store, run_llm, oracle_chain, code)
         except LLMInfraError as e:                       # the run itself is saved as infra_error (re-run on resume)
             why = ("Usage limit reached" if isinstance(e, UsageLimitError) else "LLM infrastructure error")
             print(f"\n{why} after {i - 1} of {len(todo)} runs: {e}")

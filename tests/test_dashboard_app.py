@@ -17,11 +17,24 @@ def html(at) -> str:
 def test_example_run_page_renders_with_illustrative_badge():
     at = AppTest.from_file(APP, default_timeout=60).run()
     assert not at.exception, at.exception
+    example = next(e for e in data.build_index() if "example-jazz-christmas" in e["path"])
+    at.radio[1].set_value(example).run()                       # the project list may hold other runs too
+    assert not at.exception, at.exception
     text = html(at)
     assert data.ILLUSTRATIVE_BADGE in text and "targets met - waiting for feedback" in text
     assert "Guitar pickup (6k, 2.5 H)" in text and "Reference models" in text
     assert "Highlighted rows are parameters the agent can change." in [c.value for c in at.caption]
     assert all(b.disabled for b in at.button)                      # read-only version
+
+
+def test_real_project_run_has_no_illustrative_badge():
+    real = [e for e in data.build_index() if e["set"] is None and not e["illustrative"]]
+    if not real:
+        pytest.skip("no real project run in runs/")
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    at.radio[1].set_value(real[0]).run()
+    assert not at.exception, at.exception
+    assert data.ILLUSTRATIVE_BADGE not in html(at)
 
 
 def test_benchmark_run_page_renders_without_badge():

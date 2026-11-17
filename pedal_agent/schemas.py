@@ -185,6 +185,8 @@ class RunRecord(BaseModel):
     mode: Mode = "agent"
     seed: Optional[int] = None          # for the random baselines (and repeat bookkeeping)
     benchmark: Optional[BenchmarkRef] = None   # set for benchmark runs: pre-approved spec, common start, benchmark stop rules
+    code_commit: Optional[str] = None   # git commit of the code that produced the run (benchmark runner)
+    code_dirty: Optional[bool] = None   # True if tracked files differed from that commit
     created_at: datetime = Field(default_factory=now)
     status: Literal["awaiting_spec_approval", "running", "awaiting_feedback",
                     "accepted", "stopped"]

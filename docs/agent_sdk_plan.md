@@ -152,6 +152,20 @@ repeat number for them (LLM calls are not seeded).
 | **S: subset (12 targets)** | A 3, B 5, C 5, D 2, hand 3 (2·3 + 4·5 + 4·5 + 1·2 + 1·3) | 51 | 102 | ≈ 4.6 h | ≈ 10 M / 1.1 M | ≈ $64 |
 | **F: full set (36 targets)** | A 3, B 5, C 5, D 2, hand 3 (7·3 + 9·5 + 10·5 + 4·2 + 6·3) | 142 | 284 | ≈ 12.8 h | ≈ 29 M / 3.2 M | ≈ $179 |
 
+**Decision (user, 2026-11-16): S, then F.** Command per method (`agent`, `baseline_fixed_topology`):
+`python -m scripts.run_benchmark --set v1 --method <m> --llm real --targets subset --repeats A=3,B=5,C=5,D=2,hand=3`
+(F: the same with `--targets all`; finished runs are skipped).
+
+**Freeze for the whole S+F evaluation.** Each run records the git commit it ran on (`code_commit`,
+`code_dirty`), the summary lists the commits per method, and the runner refuses a real-LLM batch when
+tracked files differ from the commit. Between the S and F batches nothing that affects the agent changes:
+prompts, agent code, config affecting the agent, the Checker, blocks, models and benchmarks.
+**Not fixed: the block-order weakness seen on G25** (the agent tried `dist_distplus → od_ts808` but not
+the solution's `od_ts808 → dist_distplus`): fixing it now would tune the agent to the test set. It is an
+observation to check across the S results (the summary's block-order table counts runs that tried both
+orders of a pair, and for C targets whether the solution's order or only the reversed one was tried).
+Agent improvements go into a later version, evaluated on a new benchmark version.
+
 **Recommendation: S first** (one evening), check the results and any agent problems (e.g. block
 order), then extend to **F** in two further batches of ~4 h (the 182 extra runs), resumable after a
 usage-limit stop. Statistical note: with 5 repeats, the subset gives 20 runs per method in B and in C
