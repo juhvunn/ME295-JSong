@@ -130,6 +130,35 @@ The proposal will give: runs per method, estimated wall time (runs × measured t
 API-equivalent cost, and how many batches/refill windows it would take. The subset view in the summary
 stays, so subset and full-set results remain comparable with the random baselines (20 seeds).
 
+### Measured (2026-11-16, two timing runs, agent, seed 1, kept in runs/bench_timing/, not results)
+| Run | Outcome | Wall time | Planner calls | Tokens in / out | API-equivalent |
+|---|---|---|---|---|---|
+| U3 (D) | budget, 12 sims, best 1/2; 6 topology changes, 2 duplicate proposals | 186 s | 13 | 117,423 / 12,858 | $0.73 |
+| G25 (C, needs tuning) | budget, 12 sims, best 3/4 (THD 9.2 % < 24.6 %); 6 topology changes | 140 s | 11 | 84,326 / 9,526 | $0.53 |
+
+- Per call: median 11–14 s, max 21 s. The prompt we send grows only from ~5.8k to ~7.4k characters over
+  a run; input tokens alternate between ~5k (2 SDK turns) and ~11–12k (3 turns, about half the calls).
+- **Planning numbers for a run that uses the full budget: about 2.7 min, ~100k tokens in, ~11k out,
+  ~$0.63 API-equivalent.** Runs that succeed early are shorter, so these are upper estimates.
+- Observation (analysis only, from the hidden solution): G25 needs `od_ts808 → dist_distplus`; the agent
+  tried two-block chains twice, both times in the order `dist_distplus → od_ts808`.
+
+### Proposal
+Both LLM methods (`agent`, `baseline_fixed_topology`) on the same targets and repeats; `seed` is only a
+repeat number for them (LLM calls are not seeded).
+
+| Option | Repeats per target | Runs per method | Runs total | Wall time (upper) | Tokens in / out | API-equivalent |
+|---|---|---|---|---|---|---|
+| **S: subset (12 targets)** | A 3, B 5, C 5, D 2, hand 3 (2·3 + 4·5 + 4·5 + 1·2 + 1·3) | 51 | 102 | ≈ 4.6 h | ≈ 10 M / 1.1 M | ≈ $64 |
+| **F: full set (36 targets)** | A 3, B 5, C 5, D 2, hand 3 (7·3 + 9·5 + 10·5 + 4·2 + 6·3) | 142 | 284 | ≈ 12.8 h | ≈ 29 M / 3.2 M | ≈ $179 |
+
+**Recommendation: S first** (one evening), check the results and any agent problems (e.g. block
+order), then extend to **F** in two further batches of ~4 h (the 182 extra runs), resumable after a
+usage-limit stop. Statistical note: with 5 repeats, the subset gives 20 runs per method in B and in C
+(95 % interval about ±20 points at 50 %); the full set gives 45–50 (about ±14 points). The random
+baselines already have 20 seeds on all targets, and the summary's subset view compares all methods on
+exactly the same targets.
+
 ## 7. Fallback: Claude Code subagents (and why we prefer the SDK)
 Alternative: run the Planner as a Claude Code subagent (or a `claude -p` headless call per step),
 driven from a Claude Code session.

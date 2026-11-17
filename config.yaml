@@ -19,12 +19,12 @@ run:
   allow_unvalidated_models: false    # true only for manual experiments; Phase 3 runs must keep false
 
 benchmark:
-  # Per-Planner-call estimates for the --llm real usage gate (scripts/run_benchmark.py). From the one-call
-  # SDK smoke test (2026-11-16: ~5050 in incl. cache writes, 394 out, 8.9 s); replace with the values
-  # measured in the first full real run.
-  est_input_tokens_per_call: 5100
-  est_output_tokens_per_call: 400
-  est_seconds_per_call: 9
+  # Per-Planner-call estimates for the --llm real usage gate (scripts/run_benchmark.py). Measured in two
+  # full 12-sim agent runs (2026-11-16, U3 and G25: 24 calls, 201,749 in incl. cache, 22,384 out, 305 s
+  # of LLM time); about half the calls take 3 SDK turns instead of 2 and use ~2x the input tokens.
+  est_input_tokens_per_call: 8400
+  est_output_tokens_per_call: 930
+  est_seconds_per_call: 13
 
 ngspice:
   # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.

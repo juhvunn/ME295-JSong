@@ -275,6 +275,12 @@ for all six, at the outside), on top of the roughly 1 hour for the generated set
    `benchmarks/v1_solutions_analysis.yaml`, derived from the hidden solutions and never read by any
    method) lets the summary split C results into "chain at defaults passes" and "needs tuning", to
    separate "picked the right chain" from "picked the chain and tuned it".
+9. **One input level only.** The Checker measures at a single input level (300 mV EMF), so goals about
+   dynamics ("breakup only when picking hard", touch sensitivity, clean-up with the guitar volume) are
+   not captured by any metric: a design can pass every target without the requested dynamic behaviour.
+   This applies to free-text goals in particular (the first real run's goal, 2026-11-16, asked for
+   "light breakup when picking hard"). A future version could add THD at a low and a high input level
+   (e.g. a "THD rise" metric); that changes the Checker, so it would need a new benchmark version (v2).
 
 ## 5. Order of work
 
