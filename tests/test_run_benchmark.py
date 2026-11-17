@@ -154,3 +154,16 @@ def test_block_order_table():
             R("G25", ["od_ts808"])]
     rows = "\n".join(summarize_benchmark.order_table(runs, ["agent"], {"G25": "od_ts808 -> dist_distplus"}, "t"))
     assert "| agent | 3 | 2 | 1 | 3 | 1 | 1 |" in rows
+
+
+def test_summary_states_knob_range_and_refuses_to_mix(tmp_path, monkeypatch, capsys):
+    def run(seed, knob):
+        step = SimpleNamespace(agent="planner", candidate=SimpleNamespace(
+            chain=[SimpleNamespace(block_id="od_ts808", params={"drive": knob, "D_clip": "si"})]))
+        return SimpleNamespace(mode="random_fixed_topology", seed=seed, steps=[step])
+    assert summarize_benchmark.knob_ranges([run(1, 0.5), run(2, 0.9)]) == {"random_fixed_topology": summarize_benchmark.RESTRICTED}
+    assert summarize_benchmark.knob_ranges([run(1, 0.5), run(2, 1.0)]) == {"random_fixed_topology": summarize_benchmark.FULL}
+    rec = SimpleNamespace(benchmark=SimpleNamespace(set="v1", target_id="G01", category="A"), mode="random_catalog", seed=1)
+    monkeypatch.setattr(summarize_benchmark, "load_runs", lambda root, infra=None: [rec])
+    assert summarize_benchmark.main([str(tmp_path / "old"), str(tmp_path / "new"), "--out", str(tmp_path / "o")]) == 1
+    assert "refusing to mix runs" in capsys.readouterr().err

@@ -1,7 +1,9 @@
 """Random designs from the block catalog, shared by the AI-free baselines and the benchmark generator.
 
-Rules (docs/phase3_plan.md): validated choices only; knobs uniform in [0.05, 0.95]; parts uniform
-over the E-series values inside min/max; chains of 1-2 blocks, no block twice, a block with
+Rules (docs/phase3_plan.md): validated choices only; knobs over the full [0, 1] range Validate allows,
+exactly 0 or exactly 1 with probability END_STOP_P each, otherwise uniform (until 2026-11-16: uniform in
+[0.05, 0.95], "restricted knob range"); parts uniform over the E-series values inside min/max;
+chains of 1-2 blocks, no block twice, a block with
 prefers_first (fuzz_ff_si) placed first. Every draw comes from the given random.Random, so a seed
 reproduces the sequence exactly.
 """
@@ -10,8 +12,18 @@ import random
 from pedal_agent.build import load_block, parse_value
 from pedal_agent.validate import allowed_choices, block_ids, series_values
 
-KNOB_RANGE = (0.05, 0.95)
+KNOB_RANGE = (0.0, 1.0)          # the Validator's range, same as the agent's
+END_STOP_P = 0.10                # per end stop: the LLM methods set 27 % of knob values to exactly 0 or 1 (batch S)
 MAX_CHAIN = 2
+
+
+def knob(rng: random.Random) -> float:
+    u = rng.random()
+    if u < END_STOP_P:
+        return KNOB_RANGE[0]
+    if u < 2 * END_STOP_P:
+        return KNOB_RANGE[1]
+    return round(rng.uniform(*KNOB_RANGE), 3)
 
 
 def sample_params(block_id: str, rng: random.Random) -> dict:
@@ -20,7 +32,7 @@ def sample_params(block_id: str, rng: random.Random) -> dict:
     for name in sorted(meta["params"]):                      # sorted: draw order does not depend on YAML order
         spec = meta["params"][name]
         if spec["type"] == "pot":
-            params[name] = round(rng.uniform(*KNOB_RANGE), 3)
+            params[name] = knob(rng)
         elif spec["type"] == "choice":
             params[name] = rng.choice(allowed_choices(spec, allow_unvalidated=False))
         else:

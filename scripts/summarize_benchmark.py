@@ -9,7 +9,10 @@ Outputs in --out (default results/bench_<set>/):
   success_vs_sims.csv   cumulative fraction of runs solved by simulation k = 1..budget, per view x group x method
   success_vs_sims.png / success_vs_sims_subset.png
 
-Usage: python -m scripts.summarize_benchmark runs/bench/v1 [--set v1] [--out results/bench_v1]
+Usage: python -m scripts.summarize_benchmark runs/bench/v1 [more run folders] [--set v1] [--out results/bench_v1] [--labels original|checked]
+  Several folders are combined, but a method/target/seed found twice stops the summary (never mixes the
+  restricted- and full-knob-range random runs); the knob range of each random method is stated.
+  --labels checked: A/B/C from benchmarks/<set>_labels_check.yaml (scripts/reachability.py), in memory only
 """
 import argparse
 import csv
@@ -20,6 +23,7 @@ from pathlib import Path
 
 import yaml
 
+from pedal_agent.build import load_block
 from pedal_agent.config import REPO_ROOT
 from pedal_agent.schemas import RunRecord
 
@@ -47,6 +51,29 @@ def load_runs(root: Path, infra: list | None = None) -> list[RunRecord]:
             continue
         runs.append(r)
     return runs
+
+
+RESTRICTED = "restricted knob range (0.05-0.95)"
+FULL = "full knob range [0, 1] with end stops"
+
+
+def knob_ranges(runs: list[RunRecord]) -> dict[str, str]:
+    """Random methods: full if any proposed knob value lies outside [0.05, 0.95], else restricted."""
+    pots = {}
+    out = {}
+    for r in runs:
+        if not r.mode.startswith("random"):
+            continue
+        for s in r.steps:
+            if s.agent != "planner" or s.candidate is None:
+                continue
+            for b in s.candidate.chain:
+                if b.block_id not in pots:
+                    pots[b.block_id] = {n for n, p in load_block(b.block_id)[1]["params"].items() if p["type"] == "pot"}
+                if any(isinstance(v, (int, float)) and not 0.05 <= v <= 0.95 for n, v in b.params.items() if n in pots[b.block_id]):
+                    out[r.mode] = FULL
+        out.setdefault(r.mode, RESTRICTED)
+    return out
 
 
 def group_of(run: RunRecord, source: dict) -> str:
@@ -221,13 +248,20 @@ def plot(path, groups, methods, budget, title):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("root", type=Path)
+    ap.add_argument("root", type=Path, nargs="+", help="one or more run folders (searched recursively)")
     ap.add_argument("--set", dest="version", default="v1")
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--labels", choices=["original", "checked"], default="original",
+                    help="checked: A/B/C from benchmarks/<set>_labels_check.yaml (scripts/reachability.py) instead of <set>.yaml")
     args = ap.parse_args(argv)
-    out = args.out or REPO_ROOT / "results" / f"bench_{args.version}"
+    out = args.out or REPO_ROOT / "results" / (f"bench_{args.version}" + ("_checked_labels" if args.labels == "checked" else ""))
     out.mkdir(parents=True, exist_ok=True)
     targets = yaml.safe_load((B / f"{args.version}.yaml").read_text(encoding="utf-8"))["targets"]
+    original, relabel = {t["id"]: t["category"] for t in targets}, {}
+    if args.labels == "checked":
+        relabel = {tid: v["new"] for tid, v in
+                   yaml.safe_load((B / f"{args.version}_labels_check.yaml").read_text(encoding="utf-8"))["targets"].items()}
+        targets = [{**t, "category": relabel.get(t["id"], t["category"])} for t in targets]
     source = {t["id"]: t["source"] for t in targets}
     subset_file = B / f"{args.version}_subset.yaml"
     subset = set(yaml.safe_load(subset_file.read_text(encoding="utf-8"))["targets"]) if subset_file.exists() else set()
@@ -236,18 +270,33 @@ def main(argv=None) -> int:
                       yaml.safe_load(flag_file.read_text(encoding="utf-8"))["targets"].items()}
                      if flag_file.exists() else {})
     infra = []
-    runs = [r for r in load_runs(args.root, infra) if r.benchmark.set == args.version]
+    runs = [r for root in args.root for r in load_runs(root, infra) if r.benchmark.set == args.version]
+    seen = defaultdict(int)
+    for r in runs:
+        seen[(r.mode, r.benchmark.target_id, r.seed)] += 1
+    if dup := [k for k, n in seen.items() if n > 1]:    # e.g. restricted- and full-knob-range random runs together
+        print(f"refusing to mix runs: {len(dup)} method/target/seed combinations appear twice, e.g. {dup[0]}",
+              file=sys.stderr)
+        return 1
+    for r in runs:                                       # in memory only; run files keep their recorded label
+        r.benchmark.category = relabel.get(r.benchmark.target_id, r.benchmark.category)
     methods = [m for m in METHODS if any(r.mode == m for r in runs)]
     budget = max((r.sim_budget for r in runs), default=12)
     full = by_group(runs, source)
     sub = by_group([r for r in runs if r.benchmark.target_id in subset], source)
 
     L = [f"# Benchmark {args.version}: summary", "",
-         f"{len(runs)} finished runs from `{args.root}`; methods: {', '.join(methods)}; budget {budget} sims. "
+         f"{len(runs)} finished runs from {', '.join(f'`{x}`' for x in args.root)}; methods: {', '.join(methods)}; budget {budget} sims. "
          "Success = all metrics in range (stop_reason all_pass). The oracle is not run on D or hand targets. "
          f"Infrastructure errors left out (re-run): {len(infra)}"
          + (" (" + ", ".join(f"{r.benchmark.target_id}/{r.mode}/seed {r.seed}" for r in infra) + ")" if infra else "")
          + ".", ""]
+    if relabel:
+        L += [f"Labels: checked (`benchmarks/{args.version}_labels_check.yaml`, scripts/reachability.py); changed: "
+              + (", ".join(f"{tid} {original[tid]}→{c}" for tid, c in relabel.items() if c != original[tid])
+                 or "none") + ".", ""]
+    ranges = knob_ranges(runs)
+    L += ["Random-method knob range: " + "; ".join(f"{SHORT[m]}: {ranges[m]}" for m in methods if m in ranges), ""]
     commits = defaultdict(lambda: defaultdict(int))     # method -> commit (+ modified) -> runs
     for r in runs:
         key = "not recorded" if r.code_commit is None else r.code_commit[:10] + (" (modified)" if r.code_dirty else "")

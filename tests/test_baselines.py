@@ -21,7 +21,7 @@ def decisions(planner, n):
 @pytest.mark.slow
 def test_samples_follow_the_rules():
     rng = random.Random(1)
-    seen_blocks, seen_lengths = set(), set()
+    seen_blocks, seen_lengths, knobs = set(), set(), []
     for _ in range(300):
         design = sample_design(rng)
         ids = [b for b, _ in design]
@@ -36,12 +36,15 @@ def test_samples_follow_the_rules():
             for name, v in params.items():
                 spec = meta["params"][name]
                 if spec["type"] == "pot":
-                    assert 0.05 <= v <= 0.95
+                    assert 0.0 <= v <= 1.0
+                    knobs.append(v)
                 elif spec["type"] == "choice":
                     assert v in spec["choices"] and not unvalidated(spec, v)      # never D_clip=ge
                 else:
                     assert v in series_values(spec["series"], parse_value(spec["min"]), parse_value(spec["max"]))
     assert seen_blocks == {"od_ts808", "dist_distplus", "fuzz_ff_si"} and seen_lengths == {1, 2}
+    ends = [sum(v == e for v in knobs) / len(knobs) for e in (0.0, 1.0)]
+    assert all(0.07 < f < 0.13 for f in ends), ends                       # END_STOP_P = 0.10 at each end stop
 
 
 def test_series_values_and_snap_agree():
