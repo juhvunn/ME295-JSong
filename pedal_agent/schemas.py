@@ -87,9 +87,20 @@ class LLMUsage(BaseModel):
     node: Literal["tone_analyst", "planner"]
     model_id: str
     effort: str
-    input_tokens: int
+    input_tokens: int                   # all input of the pinned model, incl. cache writes/reads (SDK client)
     output_tokens: int
     attempts: int = 1                   # 2 after a retry; tokens are summed over attempts
+    # Claude Agent SDK client only (docs/agent_sdk_plan.md); None for older records and other clients
+    client: Optional[str] = None                    # "claude_agent_sdk" | "anthropic_api"
+    models_used: Optional[list[str]] = None         # models that wrote the answer (must be the pinned one)
+    cache_creation_tokens: Optional[int] = None     # part of input_tokens
+    cache_read_tokens: Optional[int] = None         # part of input_tokens
+    thinking_tokens: Optional[int] = None           # part of output_tokens
+    aux_models: Optional[dict[str, dict]] = None    # Claude Code helper calls, e.g. {"claude-haiku-5-5": {"in": .., "out": ..}}
+    num_turns: Optional[int] = None
+    wall_ms: Optional[int] = None                   # wall time of the call(s), incl. process start
+    sdk_cost_estimate_usd: Optional[float] = None   # SDK's own estimate (list prices; not billing)
+    sdk_version: Optional[str] = None
 
 
 # ---------- Checker output ----------
@@ -220,8 +231,15 @@ class RunRecord(BaseModel):
         return sum(s.llm.output_tokens for s in self.steps if s.llm)
 
     @property
-    def cost_usd(self) -> float:
+    def api_equivalent_cost_usd(self) -> float:
+        """Tokens x config.yaml prices. With the Claude Code OAuth token there is no per-token billing,
+        so this is a comparison number only (all input tokens priced at the plain input price)."""
         return (self.input_tokens * self.price_in_per_mtok + self.output_tokens * self.price_out_per_mtok) / 1e6
+
+    @property
+    def cost_usd(self) -> float:
+        """Alias of api_equivalent_cost_usd (kept for older code and tests)."""
+        return self.api_equivalent_cost_usd
 
     @property
     def topology_changes(self) -> int:

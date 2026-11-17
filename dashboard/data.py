@@ -250,7 +250,7 @@ def agent_panel(run: RunRecord) -> dict:
     return {"iterations": len(run.steps), "sims": f"{run.sims_used} / {run.sim_budget}",
             "topology_changes": run.topology_changes, "stop_reason": run.stop_reason or "–",
             "planner_calls": sum(s.agent == "planner" for s in run.steps),
-            "tokens": f"{run.input_tokens} in / {run.output_tokens} out", "cost": f"${run.cost_usd:.2f}",
+            "tokens": f"{run.input_tokens} in / {run.output_tokens} out", "cost": f"${run.api_equivalent_cost_usd:.2f}",
             "model": f"{run.model_id} ({run.effort})", "mode": run.mode, "seed": run.seed,
             "benchmark": run.benchmark and {"set": run.benchmark.set, "target": run.benchmark.target_id,
                                            "category": run.benchmark.category}}

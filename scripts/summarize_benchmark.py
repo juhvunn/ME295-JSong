@@ -117,7 +117,7 @@ def c_split_table(title, runs, methods, defaults_pass):
 def details_table(title, groups, methods):
     L = [f"## {title}", "",
          "| Method | Group | Runs | Success | Median sims to success | Median best score | Mean topology changes | "
-         "Median wall s | Flagged runs | Tokens in/out | Cost USD |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+         "Median wall s | Flagged runs | Tokens in/out | API-equivalent cost USD (no per-token billing) |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for m in methods:
         for grp in GROUPS:
             rs = groups.get(grp, {}).get(m, [])
@@ -130,7 +130,7 @@ def details_table(title, groups, methods):
                      f"{statistics.mean(r.topology_changes for r in rs):.2f} | {fmt(median([wall_s(r) for r in rs]), '.1f')} | "
                      f"{sum(bool(r.placeholder_or_unvalidated) for r in rs)} | "
                      f"{sum(r.input_tokens for r in rs)}/{sum(r.output_tokens for r in rs)} | "
-                     f"{sum(r.cost_usd for r in rs):.2f} |")
+                     f"{sum(r.api_equivalent_cost_usd for r in rs):.2f} |")
     return L + [""]
 
 

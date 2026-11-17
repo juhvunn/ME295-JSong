@@ -1,11 +1,15 @@
 # Project configuration. The model ID is read ONLY from here (never hardcoded).
 llm:
+  client: "claude_agent_sdk"         # claude_agent_sdk (Claude Code OAuth token, docs/agent_sdk_plan.md) | anthropic_api
   model_id: "claude-opus-5-5"       # pinned; the only place the model ID is set
   max_retries: 2                     # attempts per LLM call: 1 retry with the validation error
   max_tokens: 16000
   effort: "medium"                   # low/medium/high/xhigh/max (output_config.effort)
   price_in_per_mtok: 4.0             # USD per million input tokens (claude-opus-5-5)
   price_out_per_mtok: 20.0           # USD per million output tokens
+  # (with the OAuth token there is no per-token billing: prices give an "API-equivalent cost" only)
+  sdk_max_turns: 3                   # SDK: the answer comes through the StructuredOutput tool (2 turns measured)
+  rate_limit_retry_s: [15, 30, 60]   # SDK: brief retries on a usage limit, then the batch stops (resume later)
 
 run:
   sim_budget: 12                     # max simulations per run
@@ -15,10 +19,12 @@ run:
   allow_unvalidated_models: false    # true only for manual experiments; Phase 3 runs must keep false
 
 benchmark:
-  # PLACEHOLDER per-planner-call token estimate for the --llm real cost gate (scripts/run_benchmark.py);
-  # replace with the measured value from the first real run.
-  est_input_tokens_per_call: 6000
-  est_output_tokens_per_call: 1500
+  # Per-Planner-call estimates for the --llm real usage gate (scripts/run_benchmark.py). From the one-call
+  # SDK smoke test (2026-11-16: ~5050 in incl. cache writes, 394 out, 8.9 s); replace with the values
+  # measured in the first full real run.
+  est_input_tokens_per_call: 5100
+  est_output_tokens_per_call: 400
+  est_seconds_per_call: 9
 
 ngspice:
   # Console build for batch runs on Windows (ngspice_con.exe); use "ngspice" on Linux/macOS.

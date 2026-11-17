@@ -11,8 +11,8 @@ from pedal_agent.schemas import MetricTarget, RunRecord
 def make_llm(kind: str):
     if kind == "fake":
         return FakeLLM()
-    from pedal_agent.llm import AnthropicLLM  # step 8
-    return AnthropicLLM()
+    from pedal_agent.llm import make_real_llm   # client chosen in config.yaml llm.client
+    return make_real_llm()
 
 
 def _b(v) -> str:
@@ -68,7 +68,8 @@ def print_summary(run: RunRecord, path, out) -> None:
         for row in report_table(run.spec, best.report):
             print(f"  {row['metric']:12s} {row['target']:>16s} {row['measured']:>10g}  {row['status']}", file=out)
     print(f"\nSimulations {run.sims_used}/{run.sim_budget}, topology changes {run.topology_changes}, "
-          f"tokens in/out {run.input_tokens}/{run.output_tokens}, cost ${run.cost_usd:.4f} "
+          f"tokens in/out {run.input_tokens}/{run.output_tokens}, "
+          f"API-equivalent cost ${run.api_equivalent_cost_usd:.4f} (no per-token billing) "
           f"({run.model_id}, effort {run.effort})", file=out)
     if run.placeholder_or_unvalidated:
         print("WARNING: placeholder/unregistered model files or unvalidated choices were used "
@@ -77,24 +78,34 @@ def print_summary(run: RunRecord, path, out) -> None:
 
 
 def cmd_run(args, ask, out) -> int:
-    llm = make_llm(args.llm)
+    from pedal_agent.llm import LLMInfraError
+    try:
+        llm = make_llm(args.llm)
+    except LLMInfraError as e:                 # e.g. no CLAUDE_CODE_OAUTH_TOKEN
+        print(f"Cannot start: {e}", file=out)
+        return 2
     agent = Agent(llm, RunStore(args.runs_dir))
     try:
         run = new_run(args.goal, llm, genre=args.genre, mode=args.mode)
         print(f"Run {run.run_id} ({args.mode}, llm={args.llm})", file=out)
-        pending = agent.start(run)
-        while pending:
-            if pending["kind"] == "approve_spec":
-                answer = {"action": "approve"} if args.auto_approve else ask_spec(pending["spec"], ask, out)
-            else:  # feedback
-                if args.no_feedback:
-                    break
-                print_summary(agent.store.load(run.run_id), agent.store.path(run.run_id), out)
-                text = ask("\nFeedback for the Planner, 'accept', or Enter to leave the run paused: ").strip()
-                if not text:
-                    break
-                answer = {"action": "accept"} if text.lower() == "accept" else {"action": "feedback", "text": text}
-            pending = agent.resume(run.run_id, answer)
+        try:
+            pending = agent.start(run)
+            while pending:
+                if pending["kind"] == "approve_spec":
+                    answer = {"action": "approve"} if args.auto_approve else ask_spec(pending["spec"], ask, out)
+                else:  # feedback
+                    if args.no_feedback:
+                        break
+                    print_summary(agent.store.load(run.run_id), agent.store.path(run.run_id), out)
+                    text = ask("\nFeedback for the Planner, 'accept', or Enter to leave the run paused: ").strip()
+                    if not text:
+                        break
+                    answer = {"action": "accept"} if text.lower() == "accept" else {"action": "feedback", "text": text}
+                pending = agent.resume(run.run_id, answer)
+        except LLMInfraError as e:             # run saved as infra_error by the Agent
+            print(f"Stopped by an LLM infrastructure problem (login, usage limit or SDK): {e}\n"
+                  f"Run file: {agent.store.path(run.run_id)}", file=out)
+            return 3
         final = agent.store.load(run.run_id)
         print_summary(final, agent.store.path(run.run_id), out)
         return 0 if final.status != "stopped" else 1

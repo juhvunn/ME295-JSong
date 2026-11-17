@@ -83,10 +83,17 @@ def cost_estimate(n_runs: int, cfg: dict) -> tuple[float, float]:
 
 
 def confirm_real(n_runs: int, cfg: dict, input_fn=input, out=print) -> bool:
+    """Usage gate: what a batch will use, then a typed "yes"."""
     exp, worst = cost_estimate(n_runs, cfg)
-    out(f"REAL API RUN: {n_runs} runs with {cfg['llm']['model_id']} (effort {cfg['llm']['effort']}).")
-    out(f"Estimated cost: about ${exp:.2f} expected, ${worst:.2f} worst case "
-        f"(placeholder token estimate in config.yaml benchmark:, prices from config.yaml llm:).")
+    b, run = cfg["benchmark"], cfg["run"]
+    calls, calls_max = n_runs * (run["sim_budget"] - 1), n_runs * run["max_planner_calls_per_sim"] * run["sim_budget"]
+    hours = (calls * b.get("est_seconds_per_call", 9) + n_runs * run["sim_budget"] * SECONDS_PER_SIM) / 3600
+    out(f"REAL LLM RUN: {n_runs} runs with {cfg['llm']['model_id']} (effort {cfg['llm']['effort']}, "
+        f"client {cfg['llm'].get('client', 'anthropic_api')}).")
+    out(f"Planner calls: about {calls} expected, at most {calls_max}; tokens about "
+        f"{calls * b['est_input_tokens_per_call']:,} in / {calls * b['est_output_tokens_per_call']:,} out.")
+    out(f"Estimated cost (API-equivalent, no per-token billing): about ${exp:.2f} expected, ${worst:.2f} worst case. "
+        f"Estimated wall time: about {hours:.1f} h. Plan usage limits apply; if hit, the batch stops and can be resumed.")
     return input_fn('Type "yes" to start: ').strip().lower() == "yes"
 
 
@@ -149,16 +156,26 @@ def main(argv=None, input_fn=input) -> int:
             if not todo or not confirm_real(len(todo), cfg, input_fn):
                 print("Not confirmed: no API call made.")
                 return 1
-            from pedal_agent.llm import AnthropicLLM
-            llm = AnthropicLLM(cfg)
+            from pedal_agent.llm import make_real_llm       # client chosen in config.yaml llm.client
+            llm = make_real_llm(cfg)
         else:
             llm = None                                   # a fresh fake script per run (below)
 
+    from pedal_agent.llm import LLMInfraError, UsageLimitError
     store = RunStore(out_dir)
     t0 = time.time()
     for i, (t, seed, oracle_chain) in enumerate(todo, 1):
         run_llm = fake_llm() if args.method in AGENT_METHODS and args.llm == "fake" else llm
-        rec = run_one(args.version, t, args.method, seed, store, run_llm, oracle_chain)
+        try:
+            rec = run_one(args.version, t, args.method, seed, store, run_llm, oracle_chain)
+        except LLMInfraError as e:                       # the run itself is saved as infra_error (re-run on resume)
+            why = ("Usage limit reached" if isinstance(e, UsageLimitError) else "LLM infrastructure error")
+            print(f"\n{why} after {i - 1} of {len(todo)} runs: {e}")
+            if isinstance(e, UsageLimitError):
+                print("The allowance refills within about 6 hours.")
+            print("Finished runs are kept. Resume later with the same command:\n  python -m scripts.run_benchmark "
+                  + " ".join(argv if argv is not None else sys.argv[1:]))
+            return 3
         print(f"[{time.time() - t0:6.0f}s] {i}/{len(todo)} {t['id']} seed {seed}: {rec.stop_reason} "
               f"after {rec.sims_used} sims", flush=True)
     return 0

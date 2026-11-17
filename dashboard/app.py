@@ -243,7 +243,7 @@ with right:
             f"<tr><td>Mode</td><td align='right'>{esc(a['mode'])}</td></tr>"
             f"<tr><td>Model</td><td align='right'>{esc(a['model'])}</td></tr>"
             f"<tr><td>Tokens</td><td align='right'>{esc(a['tokens'])}</td></tr>"
-            f"<tr><td>Cost</td><td align='right'>{esc(a['cost'])}</td></tr>"
+            f"<tr><td>API-equivalent cost<br><span class='muted'>no per-token billing</span></td><td align='right'>{esc(a['cost'])}</td></tr>"
             + (f"<tr><td>Benchmark</td><td align='right'>{esc(a['benchmark']['set'])} {esc(a['benchmark']['target'])} "
                f"(cat. {esc(a['benchmark']['category'])}), seed {a['seed']}</td></tr>" if a["benchmark"] else "")
             + "</table>", unsafe_allow_html=True)
