@@ -62,7 +62,7 @@ def index_entry(path: Path) -> dict | None:
             "category": bench["category"] if bench else None, "seed": d.get("seed"),
             "chain": " → ".join(chain) or "–", "n_pass": sum(r["status"] == "pass" for r in results),
             "n_targets": len(spec.get("targets", [])), "sims_used": d.get("sims_used", 0),
-            "goal_text": spec.get("goal_text", ""),
+            "goal_text": spec.get("goal_text", ""), "illustrative": is_illustrative(d["run_id"]),
             "spec_key": json.dumps([spec.get("goal_text"), spec.get("targets")], sort_keys=True),
             "created_at": d.get("created_at", "")}
 
@@ -107,15 +107,26 @@ def display_step(run: RunRecord, n: int | None = None) -> Step | None:
     return run.best if run.best and run.best.report else (steps[-1] if steps else None)
 
 
+ILLUSTRATIVE_BADGE = "Illustrative example - not an experimental result"
+
+
+def is_illustrative(run_id: str) -> bool:
+    """Runs made by examples/make_example_run.py (hand-written agent text) are marked in the UI."""
+    return run_id.startswith("example-")
+
+
 def header(run: RunRecord, step: Step | None) -> dict:
     n_t = len(run.spec.targets) if run.spec else 0
     n_p = step.report.n_pass if step and step.report else 0
     state = STATUS_TEXT.get(run.status, run.status)
     if run.status == "stopped" and run.stop_reason:
         state = f"stopped ({run.stop_reason.replace('_', ' ')})"
+    if run.benchmark is not None and run.stop_reason:     # benchmark runs never get feedback: show why they ended
+        state = f"stopped: {run.stop_reason.replace('_', ' ')}"
     return {"name": run.benchmark and f"Benchmark {run.benchmark.set} · {run.benchmark.target_id}" or run.project_id,
             "goal": run.spec.goal_text if run.spec else "", "badge": f"{n_p} of {n_t} targets met - {state}",
             "n_pass": n_p, "n_targets": n_t, "flagged": bool(run.placeholder_or_unvalidated),
+            "illustrative": is_illustrative(run.run_id),
             "model_id": run.model_id, "mode": run.mode}
 
 
@@ -135,6 +146,15 @@ def full_params(block_id: str, params: dict) -> dict:
     return vals
 
 
+def show_value(v, kind: str) -> str:
+    """Knob 0.582, part 68n (not 6.8e-08), choice as is."""
+    if kind == "component":
+        return eng(parse_value(v)).replace(" ", "").replace("µ", "u")
+    if kind == "pot":
+        return f"{float(v):.3g}"
+    return str(v)
+
+
 def chain_cards(step: Step) -> list[dict]:
     """One card per block: name and all settings (knobs as 0-1 positions), changed ones marked."""
     cards = []
@@ -142,8 +162,9 @@ def chain_cards(step: Step) -> list[dict]:
         _, meta = load_block(b.block_id)
         vals = full_params(b.block_id, b.params)
         cards.append({"block_id": b.block_id, "name": meta["name"], "category": meta["category"],
-                      "settings": [{"name": k, "value": v, "type": meta["params"][k]["type"],
-                                    "changed": k in (b.params or {})} for k, v in vals.items()]})
+                      "settings": [{"name": k, "value": show_value(v, meta["params"][k]["type"]),
+                                    "type": meta["params"][k]["type"], "changed": k in (b.params or {})}
+                                   for k, v in vals.items()]})
     return cards
 
 

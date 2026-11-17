@@ -37,6 +37,9 @@ def test_panels_from_the_example_run():
     assert step is not None and step.n == run.best_step
     h = data.header(run, step)
     assert h["badge"].startswith(f"{h['n_pass']} of {h['n_targets']} targets met - ")
+    assert h["illustrative"] and not h["flagged"] and "ILLUSTRATIVE EXAMPLE" in run.steps[0].why
+    assert data.ILLUSTRATIVE_BADGE == "Illustrative example - not an experimental result"
+    assert not data.is_illustrative("20261116-141741-v1-G16-random_catalog-f948")
     cards = data.chain_cards(step)
     assert [c["block_id"] for c in cards] == [b.block_id for b in step.candidate.chain]
     rows = data.target_rows(run, step)
@@ -77,6 +80,17 @@ def test_repeated_runs_groups_same_spec_and_mode():
     rep = data.repeated_runs(idx, idx[0])
     assert rep["runs"] == 3 and rep["successes"] == 2 and rep["median_sims_to_success"] == 4
     assert data.repeated_runs(idx, idx[3]) is None
+
+
+def test_card_values_and_benchmark_badge():
+    assert data.show_value(6.8e-08, "component") == "68n" and data.show_value("47n", "component") == "47n"
+    assert data.show_value(0.58213, "pot") == "0.582" and data.show_value("led", "choice") == "led"
+    run = data.load_run(EXAMPLE)
+    from pedal_agent.schemas import BenchmarkRef, BlockInstance
+    bench = run.model_copy(update={"benchmark": BenchmarkRef(set="v1", target_id="G01", category="A",
+                                                             start_chain=[BlockInstance(block_id="od_ts808")]),
+                                   "stop_reason": "all_pass"})
+    assert data.header(bench, data.display_step(bench))["badge"].endswith("targets met - stopped: all pass")
 
 
 def test_eng_format():
