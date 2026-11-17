@@ -320,7 +320,17 @@ with center:
         if not live:
             st.caption("Read-only: " + ("benchmark run." if run.benchmark else "illustrative example."))
         elif run.status == "accepted":
-            st.caption("Design accepted.")
+            folder = actions.export_folder(run.run_id, STORE)
+            if folder.exists():
+                st.caption(f"Design accepted and exported to {folder}")
+                for i, f in enumerate(sorted(folder.iterdir())):
+                    st.download_button(f"Download {f.name}", f.read_bytes(), file_name=f.name, key=f"dl-{i}",
+                                       width="stretch")
+            else:
+                st.caption("Design accepted.")
+                if st.button("Export design (netlist, BOM, summary)", type="primary", width="stretch"):
+                    do(actions.export_design, run.run_id, store=STORE)
+                    st.rerun()
         elif BUSY and not working:
             st.caption(f"Another run is active ({BUSY['run_id']}).")
 

@@ -63,8 +63,8 @@ THD_FLOOR_PCT = 1.3e-4
 # AC and transient analyses shared by check() and the noise-floor measurement (tests/test_checker_floor.py)
 ANALYSES = ["ac dec 50 20 20k", "wrdata ac.txt vdb(out)", "tran 5u 60m 40m", "wrdata tran.txt v(emf) v(out)"]
 
-def simulate(cand: Candidate, f0=1000.0, amp=0.3):
-    """One netlist for the whole chain; DC checks of block i are probed as v(x<i>.<node>)."""
+def build_netlist(cand: Candidate, f0=1000.0, amp=0.3):
+    """(netlist text, probes) exactly as simulate() runs it; also used by export.py."""
     blocks, probes = [], []   # probes: (label, vector, expect)
     for i, blk in enumerate(cand.chain, start=1):
         _, meta = load_block(blk.block_id)
@@ -73,7 +73,11 @@ def simulate(cand: Candidate, f0=1000.0, amp=0.3):
         probes += [(prefix + name, f"v(x{i}.{c['node']})", c["expect"])
                    for name, c in meta.get("dc_checks", {}).items()]
     ctrl = "\n".join(["op", f"wrdata op.txt {' '.join(v for _, v, _ in probes) or 'v(out)'}", *ANALYSES])
-    net = netlist(blocks, models_text(cand), amp, f0, ctrl)
+    return netlist(blocks, models_text(cand), amp, f0, ctrl), probes
+
+def simulate(cand: Candidate, f0=1000.0, amp=0.3):
+    """One netlist for the whole chain; DC checks of block i are probed as v(x<i>.<node>)."""
+    net, probes = build_netlist(cand, f0, amp)
     sha = hashlib.sha256(net.encode()).hexdigest()
     r = run_ngspice(net)  # sandboxed: directive filter, timeout, runs/<id>/ + logs/<id>.log
     out = {f: np.loadtxt(r.run_dir / f"{f}.txt") for f in ("op", "ac", "tran") if (r.run_dir / f"{f}.txt").exists()}

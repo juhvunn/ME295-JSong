@@ -431,6 +431,10 @@ for all six, at the outside), on top of the roughly 1 hour for the generated set
    This applies to free-text goals in particular (the first real run's goal, 2026-11-16, asked for
    "light breakup when picking hard"). A future version could add THD at a low and a high input level
    (e.g. a "THD rise" metric); that changes the Checker, so it would need a new benchmark version (v2).
+10. **Chain-length mismatch in the action space.** The agent (Validate, `validate.MAX_CHAIN = 3`) may use
+   up to 3 blocks, while the random baselines draw chains of 1-2 blocks (`sampling.MAX_CHAIN = 2`) and the
+   oracle uses the 1-2-block solution chain. In the targeted run (section 1e) one of the agent's 18
+   successes (G22 seed 5) used 3 blocks; without it the agent is 17/20. Not equalised yet (section 6).
 
 ## 6. Deferred / future work (2026-11-16)
 

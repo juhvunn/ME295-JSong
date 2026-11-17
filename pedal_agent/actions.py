@@ -18,6 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from pedal_agent import export
 from pedal_agent.config import REPO_ROOT
 from pedal_agent.graph import Agent, RunStore, new_run, slug
 from pedal_agent.schemas import Project
@@ -206,6 +207,21 @@ def accept(run_id: str, llm: str = "real", store: RunStore | None = None) -> Non
     _need(store, run_id, "awaiting_feedback")
     _acquire(store, run_id, pid=os.getpid())
     work(store, run_id, "resume", {"action": "accept"}, "fake")   # the accept path makes no LLM call
+
+
+def export_folder(run_id: str, store: RunStore | None = None) -> Path:
+    return export.exports_dir(store or RunStore()) / run_id
+
+
+def export_design(run_id: str, store: RunStore | None = None) -> Path:
+    """exports/<run_id>/ (netlist, BOM, summary) for an accepted run; never overwrites (pedal_agent/export.py)."""
+    store = store or RunStore()
+    run = store.load(run_id)
+    if run.status != "accepted":
+        raise WrongState(f"run {run_id} is {run.status}; only accepted designs are exported")
+    ppath = projects_dir(store) / f"{run.project_id}.json"
+    name = Project.model_validate_json(ppath.read_text(encoding="utf-8")).name if ppath.exists() else None
+    return export.export_run(run_id, store, project_name=name)
 
 
 def render_audio(run_id: str, clip: str):

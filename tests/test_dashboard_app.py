@@ -93,3 +93,24 @@ def test_create_form_calls_create_project_and_lock_disables_it(monkeypatch, tmp_
     at = AppTest.from_file(APP, default_timeout=60).run()
     assert next(b for b in at.button if b.label == "Create and draft target spec").disabled
     assert any("one run at a time" in c.value for c in at.caption)
+
+
+def test_accepted_run_offers_export_then_downloads(monkeypatch, tmp_path):
+    at, store, _, calls = live_app(monkeypatch, tmp_path)
+    example = next(REPO_ROOT.glob("runs/example-jazz-christmas*.json"))
+    run = data.load_run(example)
+    run.run_id, run.status, run.stop_reason = "20261117-jazz-accepted", "accepted", "human_accept"   # a real project run
+    store.save(run)
+    monkeypatch.setattr(actions, "export_design", lambda *a, **k: calls.append(("export_design", a, k)))
+    at.run()
+    assert not at.exception, at.exception
+    next(b for b in at.button if b.label == "Export design (netlist, BOM, summary)").click().run()
+    assert calls[-1][0] == "export_design" and calls[-1][1] == (run.run_id,)
+    folder = actions.export_folder(run.run_id, store)
+    folder.mkdir(parents=True)
+    for f in ("bom.csv", "netlist.cir", "summary.md"):
+        (folder / f).write_text("x", encoding="utf-8")
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    assert not at.exception, at.exception
+    assert not [b for b in at.button if b.label.startswith("Export design")]
+    assert any(f"exported to {folder}" in c.value for c in at.caption)
