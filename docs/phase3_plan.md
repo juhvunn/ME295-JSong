@@ -223,11 +223,22 @@ chain, not run on hand targets):
 | Pooled G21, G22, G24 | **14/15 = 93 % [70–99]** | 7/60 = 12 % [6–22] | 0/60 = 0 % [0–6] | 26/60 = 43 % [32–56] |
 
 Median simulations to success: agent 7.5, random_catalog 8, oracle 6.5. Every agent run changed the
-topology (1-3 simulated topology changes per run). Passing chains: G21 `dist_distplus` alone or 2-block
-chains in either order with `od_ts808`; G22 `fuzz_ff_si → od_ts808` (2), `fuzz_ff_si → dist_distplus`,
-and one 3-block chain `fuzz_ff_si → od_ts808 → dist_distplus`; G24 `dist_distplus → od_ts808` (5/5);
-H5 `fuzz_ff_si` alone. The agent often solved with a chain other than the hidden solution's, so the
-oracle (random values on the solution chain only) is not an upper bound for an adaptive method.
+topology (1-3 simulated topology changes per run). Passing chains: G21 `dist_distplus → od_ts808` (2),
+`od_ts808 → dist_distplus`, `dist_distplus` alone, `fuzz_ff_si → od_ts808`; G22 `fuzz_ff_si → od_ts808` (2),
+`fuzz_ff_si → dist_distplus`, and one 3-block chain `fuzz_ff_si → od_ts808 → dist_distplus`; G24
+`dist_distplus → od_ts808` (5/5); H5 `fuzz_ff_si` alone. The agent often solved with a chain other than the
+hidden solution's, so the oracle (random values on the solution chain only) is not an upper bound for an
+adaptive method.
+
+**Design paths** (from the run files). Hidden solutions: G21 and G24 `dist_distplus → od_ts808`, G22
+`od_ts808 → dist_distplus`, H5 `fuzz_ff_si`. G24: all 5 runs took the same path, swap to `dist_distplus`,
+4-7 value adjustments, then add `od_ts808` after it, and passed 1-2 sims later; never tried the other
+order. G22: 4 of 5 runs tried the solution chain `od_ts808 → dist_distplus` as their first topology change,
+but none passed on it: 3 moved on to `fuzz_ff_si`-first chains and passed, and seed 2 went back to it and
+spent its last 8 sims adjusting values on it (the only G22 failure). Seed 1 never tried it. H5: every run
+swapped to `fuzz_ff_si` at the first change and then only adjusted values. 7 of its 42 sims failed the
+DC bias check (Q2 collector V(c2) outside 2-7 V), 3 of them while meeting every metric window; these were
+correctly not counted as passes. Seed 3 had one such sim, then ran out of budget. G21 was the least uniform: 5 different paths.
 
 **Small sample: an indication only.** These are 4 targets with 5 agent runs each. The pooled interval
 (70–97 %) is wide, the targets were not chosen at random (they are what remained after relabelling),
