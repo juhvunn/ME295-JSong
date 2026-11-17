@@ -92,5 +92,18 @@ def test_run_record_json_carries_flag_and_files(tmp_path):
 
 
 def test_old_records_without_provenance_still_load():
-    run = RunRecord.model_validate_json((REPO_ROOT / "runs" / "example-jazz-christmas.json").read_text(encoding="utf-8"))
+    # an "old" record: the example run with the provenance fields removed (as written before they existed)
+    d = json.loads((REPO_ROOT / "runs" / "example-jazz-christmas.json").read_text(encoding="utf-8"))
+    for key in ("placeholder_or_unvalidated", "model_files"):
+        d.pop(key, None)
+    for s in d["steps"]:
+        for key in ("model_files", "unvalidated_choices", "placeholder_or_unvalidated"):
+            (s.get("report") or {}).pop(key, None)
+    run = RunRecord.model_validate(d)
     assert run.placeholder_or_unvalidated is None and run.model_files == []
+
+
+def test_example_run_uses_the_real_model_set():
+    run = RunRecord.model_validate_json((REPO_ROOT / "runs" / "example-jazz-christmas.json").read_text(encoding="utf-8"))
+    assert run.placeholder_or_unvalidated is False
+    assert [f.path for f in run.model_files] == ["models/opamps.lib", "models/diodes_fitted.lib", "models/bjts_fitted.lib"]
