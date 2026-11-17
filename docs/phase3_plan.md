@@ -103,6 +103,100 @@ measurement itself, not from ngspice. At the floor even/odd reads ≈ 5 regardle
 so it carries no information there. Benchmark rule: THD windows only for designs at ≥ 10 × the floor
 (1.3e-3 %), even/odd only at THD ≥ 1 %.
 
+## 1c. Reachability check of the v1 labels (2026-11-16, after batch S)
+
+**Original labels.** v1 labels came from one shared pool of 250 generator draws per chain (section 1,
+step 5): B = 0 of 250 `od_ts808` draws pass; C = 0 of 250 draws pass for every single block. Generated
+v1: A 7, B 9 (G08-G16), C 10 (G17-G26), D 4; hand H5 = B.
+
+**Evidence that they were wrong.** In batch S (subset, commit b0044e1), `baseline_fixed_topology`, locked
+to `[od_ts808]`, solved 17/20 B runs and 5/20 C runs (G18 5/5). Lock check (run files only): all 360
+simulations of its 51 runs used `[od_ts808]`, 0 lock rejections; the lock held. The passing designs sit
+at the knob end stops, e.g. G08 drive = tone = level = 1.0, C3 220 n (max), C4 22 p (min); G12 drive =
+tone = 1.0, level 0.35-0.45, D_clip none; G18 drive = tone = 1.0, level 0.4, C4 22 p. The generator's
+arcsine draws rarely land on several end stops at once, so "0 of 250" was weak evidence.
+
+**Stronger check** (`scripts/reachability.py`, deterministic, seed 1117; analysis only: `v1.yaml`
+categories, windows and solutions unchanged; result in `benchmarks/v1_labels_check.yaml`). For every B
+and C target and every single block, the evidence is the union of:
+1. a corner grid: knobs {0, 0.5, 1} × every validated choice × parts {min, default, max} (1134 designs);
+2. 2000 random designs per block over the full action space (knobs uniform [0, 1], every validated
+   choice, every E-series value in [min, max]);
+3. all single-block designs already simulated in benchmark runs (14,081, real Checker results);
+4. where 1-3 found no pass: a deterministic pattern search on the Checker score from the 3 best designs
+   (knob steps 0.2 → 0.025, neighbouring choices and E-series values; ≤ 100 simulations per start; 75
+   starts).
+
+This is the same action space the agent has. The labels then follow the generator's evidence rules
+unchanged (A: some `od_ts808` design passes; B: none does, but the solution is a single block or another
+single block passes; C: no single block passes). Run time 29 min (7134 sampled + ≤ 7500 search
+simulations, 2 workers).
+
+**New labels** (passing `od_ts808` designs found by grid / random / runs; "search" = found by step 4):
+
+| Target | Old | New | od_ts808 evidence | Other single blocks that pass |
+|---|---|---|---|---|
+| G08 | B | A | 12 / 0 / 36 | dist |
+| G09 | B | A | 0 / 3 / 140 | dist, fuzz |
+| G10 | B | A | 4 / 0 / 6 | dist |
+| G11 | B | A | 3 / 1 / 3 | dist, fuzz |
+| G12 | B | A | 9 / 3 / 5 | dist, fuzz |
+| G13 | B | A | 14 / 9 / 95 | dist, fuzz |
+| G14 | B | A | 3 / 0 / 0 | dist, fuzz |
+| G15 | B | A | 6 / 0 / 9 | dist |
+| G16 | B | A | 5 / 0 / 3 | dist, fuzz |
+| G17 | C | A | 0 / 2 / 0 | fuzz |
+| G18 | C | A | 18 / 3 / 38 | dist, fuzz (search) |
+| G19 | C | A | 3 / 0 / 21 | dist (search) |
+| G20 | C | A | search | fuzz |
+| G21 | C | **B** | none (search best score 0.084) | dist |
+| G22 | C | **C** | none (0.145) | none (best: dist 0.356, fuzz 0.038) |
+| G23 | C | A | search | fuzz (search) |
+| G24 | C | **B** | none (0.129) | dist |
+| G25 | C | A | 1 / 1 / 0 | fuzz |
+| G26 | C | A | search | none |
+| H5 | B | B | none (0.036) | fuzz |
+
+Generated targets after the check: **A 23, B 2 (G21, G24), C 1 (G22), D 4** (D not re-checked); H5 stays
+B. The corner grid finds most `od_ts808` passes; uniform random samples rarely do (0-9 of 2000), so these
+regions are narrow corners, not broad areas. "Runs" evidence includes designs found by the LLM methods,
+so it is not independent of the methods compared. Without it, the grid or the random samples alone give
+an `od_ts808` pass for every relabelled A target except G20, G23 and G26, whose passes come from the
+local search (which starts from the best designs, run designs included).
+
+**Consequences.** On the subset, every generated target except U3 becomes A, so batch S compares the
+methods on start-chain-reachable targets (agent 31/46 = 67 % [53-79] vs `baseline_fixed_topology`
+28/46 = 61 % [46-74]) and does not test the research question (topology changes on targets that need
+them). Results are reported with both label sets, labelled. On the full v1 set only G21, G22, G24 (and
+H5) need another topology, too few for a B/C comparison; a benchmark v2 generated with this check built
+in is future work (section 6). Summaries: `python -m scripts.summarize_benchmark runs/bench/v1 --labels
+checked` (relabels in memory; run files keep their recorded label).
+
+## 1d. Random-baseline knob range (2026-11-16)
+
+**Finding.** The random baselines sampled knobs uniformly in [0.05, 0.95], while Validate (and so the
+agent) allows [0, 1]. In batch S the LLM methods set 27 % of knob values to exactly 0 or 1 (agent: 23 %
+at 1, 4 % at 0; `baseline_fixed_topology`: 52 % at 1), and most of their passing designs use an end
+stop. Parts and choices already used their full ranges.
+
+**Why it was restricted (4b, approved 2026-11-16).** To keep the baselines' search distribution
+different from the benchmark generator's (arcsine over [0, 1], more weight near the ends), so that the
+targets are not made the way the baselines search.
+
+**Why it was changed (approved 2026-11-16).** Equal action space for all methods is the more basic
+fairness: the agents could use the end stops and the random methods could not, and the passing designs
+sit there. Since commit 34ce14e the random baselines sample knobs over [0, 1], exactly 0 or exactly 1
+with probability 10 % each (`sampling.END_STOP_P`), otherwise uniform; parts and choices unchanged.
+
+**Remaining limitation.** The random baselines are now closer to the generator's sampling (both reach the
+end stops), which 4b tried to avoid; the generated targets may now favour them somewhat.
+
+**Runs.** The three random methods are re-run with 20 seeds on the full set into
+`runs/bench/v1_full_knobs/`. The old runs stay in `runs/bench/v1/random_*`, labelled "restricted knob
+range (0.05-0.95)". The summary states each random method's knob range (read from the run files) and
+refuses to combine runs where a method/target/seed appears twice, so the two are never mixed in one
+table.
+
 ## 2. Non-AI baselines
 
 Both baselines use the **same pipeline as the agent**: Validate → Checker → Router → RunRecord. A
@@ -250,7 +344,8 @@ for all six, at the outside), on top of the roughly 1 hour for the generated set
    distribution mismatch reduces its advantage but does not remove it.
 2. **Categories are defined by random sampling of the start chain.** B and C are, by construction,
    targets that 250 generator draws of the start chain miss, so `random_fixed_topology` (12 samples) is
-   *expected* to fail them. The informative comparisons on B/C are agent vs `random_catalog`, agent vs
+   *expected* to fail them. **Update (section 1c):** 250 draws were too weak evidence; a stronger check
+   moved 16 of 19 B/C targets to A. The informative comparisons on B/C are agent vs `random_catalog`, agent vs
    `baseline_fixed_topology` (LLM), and all vs the oracle (upper bound).
 3. **Generated targets are "random-design-shaped":** combinations of metric windows a random design
    happens to produce, not necessarily musically meaningful. The hand-written targets address this,
@@ -281,6 +376,18 @@ for all six, at the outside), on top of the roughly 1 hour for the generated set
    This applies to free-text goals in particular (the first real run's goal, 2026-11-16, asked for
    "light breakup when picking hard"). A future version could add THD at a low and a high input level
    (e.g. a "THD rise" metric); that changes the Checker, so it would need a new benchmark version (v2).
+
+## 6. Deferred / future work (2026-11-16)
+
+The user chose to finish the system first; these are deferred, not dropped:
+- **Batch F** (agent and `baseline_fixed_topology` on the full v1 set): on hold. With the checked labels,
+  v1 has only G21, G22, G24 (and H5) that need another topology.
+- **Benchmark v2** generated with the reachability check of section 1c built in (and the D targets
+  re-checked), so that B/C targets are known to need another topology.
+- **Corner-heuristic baseline:** a non-LLM baseline that tries knob end stops and part extremes first.
+- **Agent improvements**, e.g. block order (in batch S the agent tried the solution order
+  `od_ts808 → dist_distplus` in only 4 of 20 C runs, and never on G23). Only in a new agent version,
+  evaluated on a new benchmark version.
 
 ## 5. Order of work
 

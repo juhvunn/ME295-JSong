@@ -15,7 +15,7 @@ All agent logic lives in the backend and runs (and is testable) without the UI.
 | Saved circuits | `projects/*.json`, best `Step` of latest run: `n_pass / len(results)`, chain | store |
 | Selected project header | `Project.name`, `spec.goal_text`, `status`, `best.report.n_pass` | graph |
 | Signal chain | `best.candidate.chain[*].block_id/params` | Planner |
-| Block schematic | `blocks/<id>/schematic.py` rendered with resolved params | schematic (Phase 4) |
+| Block schematic | `pedal_agent/schematics/<id>.py` rendered with resolved params | schematic (Phase 4) |
 | Component list | `build.render_context(block_id, params)` + `block.yaml` (highlight = keys of `params`) | build |
 | Design choices | `steps[*].n/action/title/why` | Tone Analyst, Planner, human |
 | Test result: waveform, freq. response | `best.report.plots` | Checker |
@@ -40,7 +40,7 @@ Human review points: spec approval, feedback/accept. The graph must pause there
 
 | Action | Effect |
 |---|---|
-| `create_project(name, genre, describe, reference)` | writes `Project`, starts run → Tone Analyst → `awaiting_spec_approval` |
+| `create_project(name, genre, describe, reference)` | writes `Project`, starts run → Tone Analyst → `awaiting_spec_approval`; refused while another run is active (one active run at a time, simple lock) |
 | `approve_spec(run_id, edited_targets=None)` | stores approved `TargetSpec`, resumes graph |
 | `send_feedback(run_id, text)` | appends feedback step, resumes Planner |
 | `accept(run_id)` | `status=accepted`, triggers audio render |
@@ -57,6 +57,7 @@ Human review points: spec approval, feedback/accept. The graph must pause there
 1. **Checker** (`checker.py`, done for single-block chains): `check(candidate, spec) -> CheckReport`; `pytest tests/test_checker.py` passes. Real component models replace `smoke_models.lib`.
 2. **Graph on the command line**: `python -m pedal_agent run --goal "..." [--auto-approve]` writes a valid `RunRecord`; Validate rejects bad chains without using sim budget; multi-block chains supported in `checker.simulate`.
 3. **Reliability + baseline**: `--repeats N` and `--mode baseline_fixed_topology` (Planner limited to `adjust_params`); summary table of success rate, sims used, score.
-4. **Schematics**: `blocks/<id>/schematic.py` per block, labels from the same resolved values as the netlist.
+4. **Schematics**: `pedal_agent/schematics/<id>.py` per block (code, kept out of `blocks/`, which holds the block data the
+   Checker reads), labels from the same resolved values as the netlist.
 5. **Streamlit UI**: reproduces the mockup from `runs/example-jazz-christmas.json` first, then live runs via section 3.
 6. **Audio**: DI clip (own recording) → transient sim → WAV, cached per accepted design.

@@ -1,0 +1,1153 @@
+header:
+  version: v1
+  seed: 1117
+  samples_per_block: 2000
+  grid_designs: 1134
+  valid_designs: 6400
+  run_designs: 14081
+  search_starts: 75
+  search_sims_max_per_start: 100
+  seconds: 1767
+  note: analysis only; v1.yaml categories, windows and solutions unchanged
+targets:
+  G08:
+    id: G08
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    - od_ts808
+    passing_single_blocks:
+    - dist_distplus
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 21
+        by_source:
+          grid: 3
+          random: 10
+          run: 8
+        example:
+          params:
+            C4: 2.2e-08
+            C7: 1.0e-08
+            D_clip: led
+            gain: 1.0
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 42
+          best_score: 0.4531
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 48
+        by_source:
+          grid: 12
+          random: 0
+          run: 36
+        example:
+          params: &id004
+            C3: 2.2e-08
+            C4: 2.2e-11
+            D_clip: si
+            drive: 1.0
+            level: 1.0
+            tone: 1.0
+          source: grid
+        search: null
+  G09:
+    id: G09
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 451
+        by_source:
+          grid: 9
+          random: 176
+          run: 266
+        example:
+          params:
+            C4: 2.2e-08
+            C7: 4.7e-10
+            D_clip: led
+            gain: 0.5
+            level: 0.5
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 154
+        by_source:
+          grid: 3
+          random: 147
+          run: 4
+        example:
+          params:
+            C1: 1.0e-07
+            Q_model: QBC549C
+            R5: 8200.0
+            fuzz: 0.0
+            volume: 1.0
+          source: grid
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 143
+        by_source:
+          grid: 0
+          random: 3
+          run: 140
+        example:
+          params:
+            C3: 1.0e-07
+            C4: 8.2e-11
+            D_clip: none
+            drive: 0.865
+            level: 0.071
+            tone: 0.88
+          source: random
+        search: null
+  G10:
+    id: G10
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 119
+        by_source:
+          grid: 0
+          random: 79
+          run: 40
+        example:
+          params: &id003
+            C4: 4.7e-08
+            C7: 2.2e-09
+            D_clip: none
+            gain: 0.996
+            level: 0.726
+          source: random
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 39
+          best_score: 0.2933
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 10
+        by_source:
+          grid: 4
+          random: 0
+          run: 6
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 2.2e-11
+            D_clip: led
+            drive: 1.0
+            level: 1.0
+            tone: 1.0
+          source: grid
+        search: null
+  G11:
+    id: G11
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 55
+        by_source:
+          grid: 7
+          random: 21
+          run: 27
+        example:
+          params: &id002
+            C4: 2.2e-08
+            C7: 1.0e-08
+            D_clip: si
+            gain: 0.5
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 11
+        by_source:
+          grid: 0
+          random: 11
+          run: 0
+        example:
+          params: &id001
+            C1: 3.3e-06
+            Q_model: Q2N3904
+            R5: 5600.0
+            fuzz: 0.904
+            volume: 0.992
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 7
+        by_source:
+          grid: 3
+          random: 1
+          run: 3
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 2.2e-10
+            D_clip: si
+            drive: 1.0
+            level: 0.5
+            tone: 1.0
+          source: grid
+        search: null
+  G12:
+    id: G12
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 649
+        by_source:
+          grid: 37
+          random: 240
+          run: 372
+        example:
+          params:
+            C4: 2.2e-08
+            C7: 1.0e-09
+            D_clip: si
+            gain: 0.5
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 4
+        by_source:
+          grid: 0
+          random: 4
+          run: 0
+        example:
+          params: *id001
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 17
+        by_source:
+          grid: 9
+          random: 3
+          run: 5
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 5.1e-11
+            D_clip: none
+            drive: 1.0
+            level: 0.5
+            tone: 1.0
+          source: grid
+        search: null
+  G13:
+    id: G13
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    - od_ts808
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 313
+        by_source:
+          grid: 12
+          random: 137
+          run: 164
+        example:
+          params:
+            C4: 2.2e-08
+            C7: 4.7e-10
+            D_clip: si
+            gain: 0.5
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 1
+        by_source:
+          grid: 1
+          random: 0
+          run: 0
+        example:
+          params: &id008
+            C1: 2.2e-06
+            Q_model: Q2N3904
+            R5: 4700.0
+            fuzz: 1.0
+            volume: 1.0
+          source: grid
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 118
+        by_source:
+          grid: 14
+          random: 9
+          run: 95
+        example:
+          params: &id006
+            C3: 2.2e-08
+            C4: 2.2e-11
+            D_clip: si
+            drive: 1.0
+            level: 0.5
+            tone: 1.0
+          source: grid
+        search: null
+  G14:
+    id: G14
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 516
+        by_source:
+          grid: 7
+          random: 190
+          run: 319
+        example:
+          params: *id002
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 6
+        by_source:
+          grid: 0
+          random: 6
+          run: 0
+        example:
+          params: *id001
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 3
+        by_source:
+          grid: 3
+          random: 0
+          run: 0
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 2.2e-11
+            D_clip: none
+            drive: 0.5
+            level: 1.0
+            tone: 1.0
+          source: grid
+        search: null
+  G15:
+    id: G15
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 127
+        by_source:
+          grid: 0
+          random: 86
+          run: 41
+        example:
+          params: *id003
+          source: random
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 107
+          best_score: 0.0054
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 15
+        by_source:
+          grid: 6
+          random: 0
+          run: 9
+        example:
+          params: *id004
+          source: grid
+        search: null
+  G16:
+    id: G16
+    source: generated
+    old: B
+    new: A
+    solution_chain:
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 313
+        by_source:
+          grid: 0
+          random: 138
+          run: 175
+        example:
+          params:
+            C4: 1.5e-07
+            C7: 6.8e-09
+            D_clip: none
+            gain: 0.722
+            level: 0.479
+          source: random
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 20
+        by_source:
+          grid: 0
+          random: 20
+          run: 0
+        example:
+          params:
+            C1: 4.7e-07
+            Q_model: Q2N3904
+            R5: 4700.0
+            fuzz: 0.874
+            volume: 0.852
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 8
+        by_source:
+          grid: 5
+          random: 0
+          run: 3
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 2.2e-11
+            D_clip: led
+            drive: 0.5
+            level: 0.5
+            tone: 1.0
+          source: grid
+        search: null
+  G17:
+    id: G17
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 64
+          best_score: 0.7257
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 3
+        by_source:
+          grid: 0
+          random: 3
+          run: 0
+        example:
+          params:
+            C1: 3.3e-06
+            Q_model: QBC549C
+            R5: 10000.0
+            fuzz: 0.998
+            volume: 0.257
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 2
+        by_source:
+          grid: 0
+          random: 2
+          run: 0
+        example:
+          params:
+            C3: 3.3e-08
+            C4: 1.3e-10
+            D_clip: none
+            drive: 0.877
+            level: 0.155
+            tone: 0.983
+          source: random
+        search: null
+  G18:
+    id: G18
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - dist_distplus
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 17
+        by_source:
+          grid: 0
+          random: 3
+          run: 14
+        example:
+          params:
+            C4: 1.5e-07
+            C7: 1.0e-08
+            D_clip: none
+            gain: 0.798
+            level: 0.838
+          source: random
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id005
+            C1: 1.5e-07
+            Q_model: QBC549C
+            R5: 4700.0
+            fuzz: 0.965
+            volume: 0.877
+          source: local search
+        search:
+          starts: 3
+          sims: 36
+          best_score: 0.0
+          found: *id005
+      od_ts808:
+        designs: 13538
+        passes: 59
+        by_source:
+          grid: 18
+          random: 3
+          run: 38
+        example:
+          params: *id006
+          source: grid
+        search: null
+  G19:
+    id: G19
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - dist_distplus
+    - od_ts808
+    passing_single_blocks:
+    - dist_distplus
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id007
+            C4: 2.2e-07
+            C7: 6.8e-09
+            D_clip: led
+            gain: 1.0
+            level: 0.849
+          source: local search
+        search:
+          starts: 3
+          sims: 95
+          best_score: 0.0
+          found: *id007
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 47
+          best_score: 0.1505
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 24
+        by_source:
+          grid: 3
+          random: 0
+          run: 21
+        example:
+          params:
+            C3: 4.7e-08
+            C4: 2.2e-11
+            D_clip: si
+            drive: 1.0
+            level: 1.0
+            tone: 1.0
+          source: grid
+        search: null
+  G20:
+    id: G20
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 40
+          best_score: 0.614
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 1
+        by_source:
+          grid: 1
+          random: 0
+          run: 0
+        example:
+          params: *id008
+          source: grid
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id009
+            C3: 1.5e-07
+            C4: 3.3e-11
+            D_clip: none
+            drive: 1.0
+            level: 0.155
+            tone: 0.983
+          source: local search
+        search:
+          starts: 3
+          sims: 137
+          best_score: 0.0
+          found: *id009
+  G21:
+    id: G21
+    source: generated
+    old: C
+    new: B
+    solution_chain:
+    - dist_distplus
+    - od_ts808
+    passing_single_blocks:
+    - dist_distplus
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 2
+        by_source:
+          grid: 2
+          random: 0
+          run: 0
+        example:
+          params:
+            C4: 2.2e-07
+            C7: 1.0e-08
+            D_clip: led
+            gain: 1.0
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 40
+          best_score: 0.3618
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 51
+          best_score: 0.0844
+          found: null
+  G22:
+    id: G22
+    source: generated
+    old: C
+    new: C
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks: []
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 60
+          best_score: 0.3563
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 57
+          best_score: 0.0384
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 112
+          best_score: 0.1446
+          found: null
+  G23:
+    id: G23
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 52
+          best_score: 0.1502
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id010
+            C1: 2.2e-06
+            Q_model: Q2N3904
+            R5: 4700.0
+            fuzz: 1.0
+            volume: 0.7
+          source: local search
+        search:
+          starts: 3
+          sims: 33
+          best_score: 0.0
+          found: *id010
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id011
+            C3: 6.8e-08
+            C4: 2.2e-11
+            D_clip: none
+            drive: 1.0
+            level: 0.045
+            tone: 0.029
+          source: local search
+        search:
+          starts: 3
+          sims: 134
+          best_score: 0.0
+          found: *id011
+  G24:
+    id: G24
+    source: generated
+    old: C
+    new: B
+    solution_chain:
+    - dist_distplus
+    - od_ts808
+    passing_single_blocks:
+    - dist_distplus
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 3
+        by_source:
+          grid: 2
+          random: 1
+          run: 0
+        example:
+          params:
+            C4: 4.7e-08
+            C7: 1.0e-08
+            D_clip: none
+            gain: 1.0
+            level: 1.0
+          source: grid
+        search: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 41
+          best_score: 0.6777
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 51
+          best_score: 0.1291
+          found: null
+  G25:
+    id: G25
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - fuzz_ff_si
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 82
+          best_score: 0.461
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 2
+        by_source:
+          grid: 0
+          random: 2
+          run: 0
+        example:
+          params:
+            C1: 3.3e-07
+            Q_model: QBC549C
+            R5: 5600.0
+            fuzz: 0.996
+            volume: 0.514
+          source: random
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 2
+        by_source:
+          grid: 1
+          random: 1
+          run: 0
+        example:
+          params:
+            C3: 2.2e-08
+            C4: 2.2e-10
+            D_clip: none
+            drive: 1.0
+            level: 0.5
+            tone: 1.0
+          source: grid
+        search: null
+  G26:
+    id: G26
+    source: generated
+    old: C
+    new: A
+    solution_chain:
+    - od_ts808
+    - dist_distplus
+    passing_single_blocks:
+    - od_ts808
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 43
+          best_score: 1.5297
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 70
+          best_score: 0.1399
+          found: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example:
+          params: &id012
+            C3: 1.5e-07
+            C4: 2.2e-10
+            D_clip: none
+            drive: 1.0
+            level: 0.5
+            tone: 1.0
+          source: local search
+        search:
+          starts: 3
+          sims: 59
+          best_score: 0.0
+          found: *id012
+  H5:
+    id: H5
+    source: hand
+    old: B
+    new: B
+    solution_chain:
+    - fuzz_ff_si
+    passing_single_blocks:
+    - fuzz_ff_si
+    evidence:
+      dist_distplus:
+        designs: 4800
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 93
+          best_score: 0.8989
+          found: null
+      fuzz_ff_si:
+        designs: 2143
+        passes: 1058
+        by_source:
+          grid: 18
+          random: 596
+          run: 444
+        example:
+          params:
+            C1: 1.0e-07
+            Q_model: QBC549C
+            R5: 8200.0
+            fuzz: 0.0
+            volume: 0.0
+          source: grid
+        search: null
+      od_ts808:
+        designs: 13538
+        passes: 0
+        by_source:
+          grid: 0
+          random: 0
+          run: 0
+        example: null
+        search:
+          starts: 3
+          sims: 119
+          best_score: 0.0359
+          found: null
