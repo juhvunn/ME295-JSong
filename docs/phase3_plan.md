@@ -197,6 +197,50 @@ range (0.05-0.95)". The summary states each random method's knob range (read fro
 refuses to combine runs where a method/target/seed appears twice, so the two are never mixed in one
 table.
 
+## 1e. Targeted run on the targets that need another topology (2026-11-16)
+
+**Why.** After the relabelling (1c), only G21, G24 (B), G22 (C) and H5 (B) need a topology other than the
+start chain `[od_ts808]`. Batch S had none of them, so it could not test the research question.
+
+**What.** Mode `agent` only (`baseline_fixed_topology` cannot solve these by construction), 5 repeats per
+target = 20 runs, real LLM, commit 9d18848 (clean). The agent code is unchanged since the frozen commit
+b0044e1: `git diff b0044e1 9d18848` touches only `pedal_agent/actions.py` (dashboard, not used by the
+runner) and the random baselines' sampler under `pedal_agent/`, and nothing in `config.yaml`, `blocks/`,
+`models/`, the benchmark files or the runner. Compared with the full-knob random runs (1d), 20 seeds
+each, on the same targets. Wall 27 min, 20 runs, 0 infra errors; tokens 869,194 in / 115,892 out,
+API-equivalent $5.79 (no per-token billing).
+
+**Results** (successes / runs, 95 % Wilson interval; oracle = random parameters of the hidden solution's
+chain, not run on hand targets):
+
+| Target | agent | random_catalog | random_fixed_topology | oracle |
+|---|---|---|---|---|
+| G21 (B) | 5/5 = 100 % [57–100] | 3/20 = 15 % [5–36] | 0/20 = 0 % [0–16] | 9/20 = 45 % [26–66] |
+| G22 (C) | 4/5 = 80 % [38–96] | 2/20 = 10 % [3–30] | 0/20 = 0 % [0–16] | 10/20 = 50 % [30–70] |
+| G24 (B) | 5/5 = 100 % [57–100] | 2/20 = 10 % [3–30] | 0/20 = 0 % [0–16] | 7/20 = 35 % [18–57] |
+| H5 (B, hand) | 4/5 = 80 % [38–96] | 18/20 = 90 % [70–97] | 0/20 = 0 % [0–16] | – |
+| Pooled (4 targets) | **18/20 = 90 % [70–97]** | 25/80 = 31 % [22–42] | 0/80 = 0 % [0–5] | – |
+| Pooled G21, G22, G24 | **14/15 = 93 % [70–99]** | 7/60 = 12 % [6–22] | 0/60 = 0 % [0–6] | 26/60 = 43 % [32–56] |
+
+Median simulations to success: agent 7.5, random_catalog 8, oracle 6.5. Every agent run changed the
+topology (1-3 simulated topology changes per run). Passing chains: G21 `dist_distplus` alone or 2-block
+chains in either order with `od_ts808`; G22 `fuzz_ff_si → od_ts808` (2), `fuzz_ff_si → dist_distplus`,
+and one 3-block chain `fuzz_ff_si → od_ts808 → dist_distplus`; G24 `dist_distplus → od_ts808` (5/5);
+H5 `fuzz_ff_si` alone. The agent often solved with a chain other than the hidden solution's, so the
+oracle (random values on the solution chain only) is not an upper bound for an adaptive method.
+
+**Small sample: an indication only.** These are 4 targets with 5 agent runs each. The pooled interval
+(70–97 %) is wide, the targets were not chosen at random (they are what remained after relabelling),
+and one of them (H5) is a hand target that `random_catalog` solves about as often as the agent. The
+result supports, but does not establish, that the agent can find topology changes when they are
+needed; a benchmark v2 with many B/C targets (section 6) is needed for a real test.
+
+**Remaining action-space difference: chain length.** Validate allows chains of up to 3 blocks
+(`validate.MAX_CHAIN = 3`), the random baselines sample 1-2 blocks (`sampling.MAX_CHAIN = 2`), and the
+oracle uses the 1-2-block solution chain. One of the agent's 18 successes (G22 seed 5) used 3 blocks;
+the other 17 used chains the random catalog can draw. Not changed now (deferred, section 6); without
+that run the agent is still 17/20 pooled.
+
 ## 2. Non-AI baselines
 
 Both baselines use the **same pipeline as the agent**: Validate → Checker → Router → RunRecord. A
@@ -384,6 +428,7 @@ The user chose to finish the system first; these are deferred, not dropped:
   v1 has only G21, G22, G24 (and H5) that need another topology.
 - **Benchmark v2** generated with the reachability check of section 1c built in (and the D targets
   re-checked), so that B/C targets are known to need another topology.
+- **Equal chain length:** random baselines sample 1-2 blocks, Validate allows 3 (section 1e).
 - **Corner-heuristic baseline:** a non-LLM baseline that tries knob end stops and part extremes first.
 - **Agent improvements**, e.g. block order (in batch S the agent tried the solution order
   `od_ts808 → dist_distplus` in only 4 of 20 C runs, and never on G23). Only in a new agent version,
