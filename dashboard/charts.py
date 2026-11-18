@@ -35,32 +35,49 @@ def _hover(field: str):
     return alt.selection_point(nearest=True, on="pointerover", fields=[field], empty=False, clear="pointerout")
 
 
-def waveform_chart(p) -> alt.Chart:
-    """Input (dashed blue) and output (orange) over the last two periods; mV when both stay below 1 V."""
+def _peak_text(v: float) -> str:
+    return f"{v:.3g} V" if v >= 1.0 else f"{v * 1e3:.3g} mV"
+
+
+def waveform_chart(p, normalized: bool = True) -> alt.Chart:
+    """Input (dashed blue) and output (orange) over the last two periods.
+
+    normalized: each trace divided by its own peak (clipping shape visible at any level); otherwise in mV when both
+    stay below 1 V, else V. The legend names each trace's actual peak; the tooltip always shows actual values.
+    """
     big = max(map(abs, p.v_in + p.v_out)) >= 1.0
     k, unit = (1.0, "V") if big else (1e3, "mV")
+    fmt = ".1f" if unit == "mV" else ".3f"
+    pk_in, pk_out = max(map(abs, p.v_in)) or 1.0, max(map(abs, p.v_out)) or 1.0
+    names = [f"Input (peak {_peak_text(pk_in)})", f"Output (peak {_peak_text(pk_out)})"]
     t = [x * 1e3 for x in p.t_s]
     wide = pd.DataFrame({"t": t, "Input": [v * k for v in p.v_in], "Output": [v * k for v in p.v_out]})
-    lo, hi = min(wide[["Input", "Output"]].min()), max(wide[["Input", "Output"]].max())
-    long = wide.melt("t", var_name="signal", value_name="v")
-    sig = alt.Scale(domain=["Input", "Output"], range=[BLUE, ORANGE])
+    if normalized:
+        plotted = pd.DataFrame({"t": t, names[0]: [v / pk_in for v in p.v_in], names[1]: [v / pk_out for v in p.v_out]})
+        y_title, lo, hi = "normalized (peak = 1)", -1.0, 1.0
+    else:
+        plotted = wide.rename(columns={"Input": names[0], "Output": names[1]})
+        y_title, lo, hi = unit, min(wide[["Input", "Output"]].min()), max(wide[["Input", "Output"]].max())
+    long = plotted.melt("t", var_name="signal", value_name="v")
+    sig = alt.Scale(domain=names, range=[BLUE, ORANGE])
     x = alt.X("t:Q", title="time (ms)", scale=alt.Scale(nice=False, zero=False), axis=alt.Axis(tickCount=6))
     lines = alt.Chart(long).mark_line(strokeWidth=2).encode(
-        x=x, y=alt.Y("v:Q", title=unit, scale=alt.Scale(domain=_domain(lo, hi), nice=False, zero=False),
+        x=x, y=alt.Y("v:Q", title=y_title, scale=alt.Scale(domain=_domain(lo, hi), nice=False, zero=False),
                      axis=alt.Axis(tickCount=6)),
         color=alt.Color("signal:N", scale=sig, legend=alt.Legend()),
-        strokeDash=alt.StrokeDash("signal:N", scale=alt.Scale(domain=["Input", "Output"], range=[[6, 4], [1, 0]]),
+        strokeDash=alt.StrokeDash("signal:N", scale=alt.Scale(domain=names, range=[[6, 4], [1, 0]]),
                                   legend=alt.Legend()))          # same field: merged with the colour legend
     hover = _hover("t")
     rule = alt.Chart(wide).mark_rule(color="#8a8982").encode(
         x="t:Q", opacity=alt.condition(hover, alt.value(0.6), alt.value(0)),
         tooltip=[alt.Tooltip("t:Q", title="time (ms)", format=".3f"),
-                 alt.Tooltip("Input:Q", title=f"input ({unit})", format=".1f" if unit == "mV" else ".3f"),
-                 alt.Tooltip("Output:Q", title=f"output ({unit})", format=".1f" if unit == "mV" else ".3f")]
+                 alt.Tooltip("Input:Q", title=f"input ({unit})", format=fmt),
+                 alt.Tooltip("Output:Q", title=f"output ({unit})", format=fmt)]
     ).add_params(hover)
     dots = lines.mark_point(filled=True, size=40).encode(
         opacity=alt.condition(hover, alt.value(1), alt.value(0))).transform_filter(hover)
-    return _style(alt.layer(lines, rule, dots).properties(title=alt.TitleParams("Waveform", subtitle="last 2 periods")))
+    sub = "last 2 periods, each trace scaled to its own peak" if normalized else "last 2 periods"
+    return _style(alt.layer(lines, rule, dots).properties(title=alt.TitleParams("Waveform", subtitle=sub)))
 
 
 def response_chart(p) -> alt.Chart:

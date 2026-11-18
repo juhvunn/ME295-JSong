@@ -22,7 +22,7 @@ Demo sound | Feedback (side by side, equal height; Export design with Feedback),
 | Block schematic | `pedal_agent/schematics/<id>.py` rendered with resolved params, one per block; fitted to the column, full size in an expander, PNG/SVG download | schematic (Phase 4) |
 | Demo sound | `audio.dry/processed` | audio render (Phase 6) |
 | Feedback | appends `Step(action="human_feedback")`, resumes graph; also Accept and Export design | graph, export |
-| Test result: waveform, freq. response | `best.report.plots`; dashboard/charts.py: Vega-Lite charts drawn by the page as SVG, same height (400 px), legend at the top inside the plot, padded y range (waveform in mV below 1 V), log x 20 Hz-20 kHz, hover guide line with exact values, width follows the column | Checker |
+| Test result: waveform, freq. response | `best.report.plots`; dashboard/charts.py: Vega-Lite charts drawn by the page as SVG, same height (400 px), legend at the top inside the plot, padded y range; waveform toggle Normalized (default: each trace scaled to its own peak, actual peaks in the legend) / Volts (mV below 1 V), log x 20 Hz-20 kHz, hover guide line with exact values, width follows the column | Checker |
 | Test result: target table | `spec.targets` + `best.report.results` | Checker |
 | Design choices | `steps[*].n/action/title/why`; timeline in a fixed-height (400 px) scrolling box that opens at the newest step | Tone Analyst, Planner, human |
 | Component list | `build.render_context(block_id, params)` + `block.yaml` (highlight = keys of `params`); per block, in one fixed-height (400 px) scrolling box | build |

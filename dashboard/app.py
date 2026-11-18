@@ -315,11 +315,14 @@ with center:
 
     # 5. test result
     with st.container(border=True):
-        st.markdown(f"**Test result** · step {step.n}")
+        h1, h2 = st.columns([3, 2], vertical_alignment="center")
+        h1.markdown(f"**Test result** · step {step.n}")
+        scale = h2.segmented_control("Waveform scale", ["Normalized", "Volts"], default="Normalized",
+                                     key="wave_scale", label_visibility="collapsed")
         p = step.report.plots
         g1, g2 = st.columns(2)
         if p:
-            g1.altair_chart(waveform_chart(p), width="stretch")
+            g1.altair_chart(waveform_chart(p, normalized=scale != "Volts"), width="stretch")
             g2.altair_chart(response_chart(p), width="stretch")
         else:
             st.caption("No plot data stored for this step.")

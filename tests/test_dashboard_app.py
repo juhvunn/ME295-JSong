@@ -1,4 +1,6 @@
 """The Streamlit page runs without errors (streamlit.testing, no browser, no simulations)."""
+import json
+
 import pytest
 
 pytest.importorskip("streamlit")
@@ -132,3 +134,20 @@ def test_center_column_order():
     first = [next(i for i, t in enumerate(texts) if name in t) for name in order]
     assert first == sorted(first), dict(zip(order, first))
     assert "Highlighted rows are parameters the agent can change." in [c.value for c in at.caption]
+
+
+def test_waveform_scale_toggle_defaults_to_normalized():
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    example = next(e for e in data.build_index() if "example-jazz-christmas" in e["path"])
+    at.radio[1].set_value(example["run_id"]).run()
+    toggle = at.button_group(key="wave_scale")
+    assert toggle.value == "Normalized"
+
+    def wave_y_title():
+        chart = next(c for c in at.get("vega_lite_chart") if '"Waveform"' in c.proto.spec)
+        return json.loads(chart.proto.spec)["layer"][0]["encoding"]["y"]["title"]
+
+    assert wave_y_title() == "normalized (peak = 1)"
+    toggle.set_value("Volts").run()
+    assert not at.exception, at.exception
+    assert wave_y_title() in ("mV", "V")
