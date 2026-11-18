@@ -6,7 +6,9 @@ shell, and only allows a small set of commands inside .control blocks.
 """
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import subprocess
 import uuid
 from dataclasses import dataclass
@@ -30,6 +32,14 @@ ALLOWED_CONTROL_COMMANDS = {
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9]+$")
 
+# Audio renders only (simulate(..., clip=...)): the input comes from an XSPICE filesource reading CLIP_FILE, which
+# simulate() itself writes next to the netlist. These two lines are the only file reference a netlist may contain.
+CLIP_FILE = "clip.txt"
+CLIP_SOURCE = ("A_clip %v([emf]) clip_src\n"
+               f'.model clip_src filesource (file="{CLIP_FILE}" amploffset=[0] amplscale=[1] timeoffset=0 '
+               "timescale=1 timerelative=false amplstep=false)")
+FILE_PARAM_RE = re.compile(r"filesource|\w*file\w*\s*=", re.IGNORECASE)   # any XSPICE parameter that names a file
+
 
 class UnsafeNetlistError(ValueError):
     pass
@@ -49,13 +59,20 @@ class SimResult:
         return not self.timed_out and self.returncode == 0
 
 
-def check_netlist(netlist: str) -> None:
-    """Raise UnsafeNetlistError if the netlist contains a dangerous directive."""
+def check_netlist(netlist: str, clip: bool = False) -> None:
+    """Raise UnsafeNetlistError if the netlist contains a dangerous directive.
+
+    clip=True (audio renders) allows exactly the CLIP_SOURCE lines; any other mention of a file parameter is
+    rejected in every mode.
+    """
     in_control = False
+    allowed = set(CLIP_SOURCE.splitlines()) if clip else set()
     for lineno, raw in enumerate(netlist.splitlines(), start=1):
         line = raw.strip()
         if not line or line.startswith("*"):
             continue
+        if FILE_PARAM_RE.search(line) and line not in allowed:
+            raise UnsafeNetlistError(f"line {lineno}: file reference not allowed")
         word = line.split()[0].lower()
 
         if word in FORBIDDEN_DIRECTIVES:
@@ -77,6 +94,17 @@ def check_netlist(netlist: str) -> None:
                 raise UnsafeNetlistError(f"line {lineno}: wrdata target must be a bare filename")
 
 
+def codemodel_path(executable: str) -> Path:
+    """analog.cm (holds filesource) of this ngspice: config audio.codemodel, else <ngspice bin>/../lib/ngspice/."""
+    configured = load_config().get("audio", {}).get("codemodel")
+    if configured:
+        return Path(configured)
+    exe = shutil.which(executable)
+    if not exe:
+        raise FileNotFoundError(f"ngspice executable {executable!r} not found")
+    return Path(exe).resolve().parent.parent / "lib" / "ngspice" / "analog.cm"
+
+
 def new_run_id() -> str:
     return f"{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}"
 
@@ -86,12 +114,16 @@ def simulate(
     run_id: str | None = None,
     timeout_s: float | None = None,
     executable: str | None = None,
+    clip: str | None = None,
 ) -> SimResult:
     """Save netlist to runs/sims/<id>/circuit.cir and run `ngspice -b` with a timeout.
 
     Output files written by wrdata land in runs/sims/<id>/; the ngspice log goes to logs/<id>.log.
+    clip (audio renders only): text of CLIP_FILE ("time value" lines), written next to the netlist; ngspice then
+    starts with a spinit of ours that loads only the analog code models (filesource), via SPICE_SCRIPTS.
+    Without clip, ngspice runs exactly as before (no code models, no environment change).
     """
-    check_netlist(netlist)
+    check_netlist(netlist, clip=clip is not None)
 
     cfg = load_config()
     run_id = run_id or new_run_id()
@@ -108,6 +140,12 @@ def simulate(
     netlist_path = run_dir / "circuit.cir"
     netlist_path.write_text(netlist, encoding="utf-8")
     log_path = logs_dir / f"{run_id}.log"
+    env = None
+    if clip is not None:
+        (run_dir / CLIP_FILE).write_text(clip, encoding="ascii")
+        cm = codemodel_path(executable)
+        (run_dir / "spinit").write_text(f"codemodel {cm.as_posix()}\n", encoding="ascii")
+        env = {**os.environ, "SPICE_SCRIPTS": str(run_dir)}
 
     try:
         proc = subprocess.run(
@@ -116,6 +154,7 @@ def simulate(
             stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=timeout_s,
+            env=env,
         )
         returncode, timed_out = proc.returncode, False
     except subprocess.TimeoutExpired:

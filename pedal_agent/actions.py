@@ -7,7 +7,8 @@ the page can poll the file and a page reload does not stop a run.
 
 One active run at a time: a worker holds runs/active_run.lock (created exclusively) while it works and
 removes it when it pauses or ends. Any action that would start a worker is refused while the lock is
-held; a lock left by a worker that no longer exists is cleared.
+held; a lock left by a worker that no longer exists is cleared. Demo sound renders (Phase 6) take the same
+lock (task "audio"), so they never run alongside an agent run's simulations.
 """
 import argparse
 import json
@@ -18,7 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from pedal_agent import export
+from pedal_agent import audio, export
 from pedal_agent.config import REPO_ROOT
 from pedal_agent.graph import Agent, RunStore, new_run, slug
 from pedal_agent.schemas import Project
@@ -75,14 +76,14 @@ def active(store: RunStore) -> dict | None:
     return None
 
 
-def _acquire(store: RunStore, run_id: str, pid: int = 0) -> None:
+def _acquire(store: RunStore, run_id: str, pid: int = 0, task: str = "agent") -> None:
     active(store)                                             # clears a stale lock
     try:
         fd = os.open(_lock_path(store), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
         raise Busy(f"another run is active: {active(store)}") from None
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump({"run_id": run_id, "pid": pid, "since": f"{datetime.now():%Y-%m-%d %H:%M:%S}"}, f)
+        json.dump({"run_id": run_id, "pid": pid, "task": task, "since": f"{datetime.now():%Y-%m-%d %H:%M:%S}"}, f)
 
 
 def _set_pid(store: RunStore, run_id: str, pid: int) -> None:
@@ -105,9 +106,14 @@ def _release(store: RunStore, run_id: str) -> None:
 # ---------- worker ----------
 def _spawn(store: RunStore, run_id: str, kind: str, answer: dict | None, llm: str) -> None:
     """Take the lock for run_id, then start a worker process that keeps it until it pauses or ends."""
-    _acquire(store, run_id)
-    cmd = [sys.executable, "-m", "pedal_agent.actions", "worker", run_id, kind, "--llm", llm,
-           "--runs-dir", str(store.dir), "--answer", json.dumps(answer or {})]
+    _start(store, run_id, ["worker", run_id, kind, "--llm", llm, "--runs-dir", str(store.dir),
+                           "--answer", json.dumps(answer or {})])
+
+
+def _start(store: RunStore, run_id: str, args: list[str], task: str = "agent") -> None:
+    """Take the lock (for task), then start `python -m pedal_agent.actions <args>`, which releases it."""
+    _acquire(store, run_id, task=task)
+    cmd = [sys.executable, "-m", "pedal_agent.actions", *args]
     log = (REPO_ROOT / "logs")
     log.mkdir(exist_ok=True)
     try:
@@ -141,6 +147,16 @@ def work(store: RunStore, run_id: str, kind: str, answer: dict, llm: str) -> int
     except LLMInfraError as e:                   # the Agent has marked the run infra_error
         print(f"LLM infrastructure problem: {e}", flush=True)
         return 3
+    finally:
+        _release(store, run_id)
+
+
+def work_audio(store: RunStore, run_id: str, clips: list[str] | None) -> int:
+    """Render demo sounds (in the worker process). Releases the lock."""
+    try:
+        for m in audio.render_all(store.dir, store.load(run_id), clips):
+            print(f"{m['clip']}: {m.get('error') or audio.level_text(m)}", flush=True)
+        return 0
     finally:
         _release(store, run_id)
 
@@ -202,11 +218,15 @@ def send_feedback(run_id: str, text: str, llm: str = "real", store: RunStore | N
 
 
 def accept(run_id: str, llm: str = "real", store: RunStore | None = None) -> None:
-    """status = accepted (no LLM call; runs in this process under the lock). Audio: Phase 6."""
+    """status = accepted (no LLM call; runs in this process under the lock), then demo sounds render in a worker."""
     store = store or RunStore()
     _need(store, run_id, "awaiting_feedback")
     _acquire(store, run_id, pid=os.getpid())
     work(store, run_id, "resume", {"action": "accept"}, "fake")   # the accept path makes no LLM call
+    try:
+        render_audio(run_id, store=store)             # there is always a clip: the synthetic one is generated
+    except Busy:                                      # another run took the lock first: render later from the page
+        pass
 
 
 def export_folder(run_id: str, store: RunStore | None = None) -> Path:
@@ -224,8 +244,16 @@ def export_design(run_id: str, store: RunStore | None = None) -> Path:
     return export.export_run(run_id, store, project_name=name)
 
 
-def render_audio(run_id: str, clip: str):
-    raise NotImplementedError("Phase 6")
+def render_audio(run_id: str, clip: str | None = None, store: RunStore | None = None) -> None:
+    """Demo sound of an accepted design for one clip in audio/ (default: every clip not rendered yet), in a worker
+    process under the one-run lock (pedal_agent/audio.py; cached in runs/audio/<run_id>/<clip>/)."""
+    store = store or RunStore()
+    _need(store, run_id, "accepted")
+    names = [c.name for c in audio.clips()]
+    if clip is not None and clip not in names:
+        raise ValueError(f"no clip {clip!r} in {audio.clips_dir()}")
+    _start(store, run_id, ["audio", run_id, "--runs-dir", str(store.dir)] + (["--clip", clip] if clip else []),
+           task="audio")
 
 
 def main(argv=None) -> int:
@@ -237,9 +265,15 @@ def main(argv=None) -> int:
     w.add_argument("--llm", choices=["real", "fake"], default="real")
     w.add_argument("--runs-dir")
     w.add_argument("--answer", default="{}")
+    a = sub.add_parser("audio", help="internal: render demo sounds of an accepted run")
+    a.add_argument("run_id")
+    a.add_argument("--runs-dir")
+    a.add_argument("--clip", action="append")
     args = ap.parse_args(argv)
     store = RunStore(args.runs_dir)
     _set_pid(store, args.run_id, os.getpid())
+    if args.cmd == "audio":
+        return work_audio(store, args.run_id, args.clip)
     return work(store, args.run_id, args.kind, json.loads(args.answer), args.llm)
 
 

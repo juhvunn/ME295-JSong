@@ -20,9 +20,9 @@ Demo sound | Feedback (side by side, equal height; Export design with Feedback),
 | Selected project header | `Project.name`, `spec.goal_text`, `status`, `best.report.n_pass` | graph |
 | Signal chain | `best.candidate.chain[*].block_id/params` | Planner |
 | Block schematic | `pedal_agent/schematics/<id>.py` rendered with resolved params, one per block; fitted to the column, full size in an expander, PNG/SVG download | schematic (Phase 4) |
-| Demo sound | `audio.dry/processed` | audio render (Phase 6) |
+| Demo sound | every WAV in `audio/` as a clip; Dry/Processed player of the accepted design (best step) from `runs/audio/<run_id>/<clip>/{dry,processed}.wav` + `meta.json`; real output level and the 0.3 V input assumption under the player; Render button for clips not rendered yet | `pedal_agent/audio.py` (Phase 6) |
 | Feedback | appends `Step(action="human_feedback")`, resumes graph; also Accept and Export design | graph, export |
-| Test result: waveform, freq. response | `best.report.plots`; dashboard/charts.py: Vega-Lite charts drawn by the page as SVG, same height (400 px), legend at the top inside the plot, padded y range; waveform toggle Normalized (default: each trace scaled to its own peak, actual peaks in the legend) / Volts (mV below 1 V), log x 20 Hz-20 kHz, hover guide line with exact values, width follows the column | Checker |
+| Test result: waveform, freq. response | `best.report.plots`; dashboard/charts.py: Vega-Lite charts drawn by the page as SVG, same height (400 px), legend at the top inside the plot, padded y range; two-line subtitles (waveform: actual peaks; response: peak gain and frequency); waveform toggle Normalized (default: each trace scaled to its own peak) / Volts (mV below 1 V) in the waveform column, with an equal-height spacer above the response so both plots align, log x 20 Hz-20 kHz, hover guide line with exact values, width follows the column | Checker |
 | Test result: target table | `spec.targets` + `best.report.results` | Checker |
 | Design choices | `steps[*].n/action/title/why`; timeline in a fixed-height (400 px) scrolling box that opens at the newest step | Tone Analyst, Planner, human |
 | Component list | `build.render_context(block_id, params)` + `block.yaml` (highlight = keys of `params`); per block, in one fixed-height (400 px) scrolling box | build |
@@ -47,9 +47,9 @@ Human review points: spec approval, feedback/accept. The graph must pause there
 | `create_project(name, genre, describe, reference)` | writes `Project`, starts run → Tone Analyst → `awaiting_spec_approval`; refused while another run is active (one active run at a time, simple lock) |
 | `approve_spec(run_id, edited_targets=None)` | stores approved `TargetSpec`, resumes graph |
 | `send_feedback(run_id, text)` | appends feedback step, resumes Planner |
-| `accept(run_id)` | `status=accepted`, triggers audio render |
-| `export_design(run_id)` | accepted runs only, on the user's click: `exports/<run_id>/` with `netlist.cir` (the exact simulated netlist, SHA-256 checked against the Checker report; refused if it no longer reproduces), `bom.csv` (signal-path parts per block, pots with knob setting), `schematic_<n>_<block>.svg/.png` per block (pedal_agent/schematics, connections checked against the netlist, subcircuit verbatim in `netlist.cir`) and `summary.md`; never overwrites (`pedal_agent/export.py`) |
-| `render_audio(run_id, clip)` | Phase 6 |
+| `accept(run_id)` | `status=accepted`, then starts `render_audio` for every clip (if any) |
+| `export_design(run_id)` | accepted runs only, on the user's click: `exports/<run_id>/` with `netlist.cir` (the exact simulated netlist, SHA-256 checked against the Checker report; refused if it no longer reproduces), `bom.csv` (signal-path parts per block, pots with knob setting), `schematic_<n>_<block>.svg/.png` per block (pedal_agent/schematics, connections checked against the netlist, subcircuit verbatim in `netlist.cir`) and `summary.md` (with the demo-sound input assumption and the output level of each current render); never overwrites (`pedal_agent/export.py`) |
+| `render_audio(run_id, clip=None)` | accepted runs only; a worker under the same one-run lock (task `audio`, so never alongside an agent run's simulations) simulates the clip(s) through the best step: transient at the clip's rate, input from an XSPICE filesource reading a data file that `simulate()` writes (the only file reference the filter allows, audio renders only); cached per design and clip file (SHA-256) |
 
 ## 4. Fixed choices
 
@@ -65,4 +65,5 @@ Human review points: spec approval, feedback/accept. The graph must pause there
 4. **Schematics**: `pedal_agent/schematics/<id>.py` per block (code, kept out of `blocks/`, which holds the block data the
    Checker reads), labels from the same resolved values as the netlist.
 5. **Streamlit UI**: reproduces the mockup from `runs/example-jazz-christmas.json` first, then live runs via section 3.
-6. **Audio**: DI clip (own recording) → transient sim → WAV, cached per accepted design.
+6. **Audio**: DI clips (own recordings, mono WAV 44.1/48 kHz in `audio/`; synthetic test clip `audio/synthetic_plucks.wav`, generated on first use from fixed parameters by `pedal_agent/audio.py:synth` (four plucked notes E2 A2 D3 G3, then a strummed E major chord; 8 s, 44.1 kHz, −6 dBFS; gitignored)) → first 8 s, scaled to 0.3 V peak at the pickup → transient sim → dry/processed WAV at −1 dBFS, cached per accepted design. Measured render time for an 8 s clip: 6.6 s (TS-808), 9.8 s (3-block chain).
+   **Limitation (aliasing):** by default (`config.yaml audio.oversample: 1`) the circuit is simulated at the clip's sample rate, so output content above half the sample rate (hard fuzz harmonics) can fold back as aliasing in the processed WAV. `oversample: 2` simulates at twice the rate and low-pass filters back (measured about 1.5× render time: 8 s clip, TS-808 6.6 → 9.9 s, 3-block chain 9.8 → 14.9 s). The export summary states which was used.

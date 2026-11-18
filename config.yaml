@@ -32,6 +32,17 @@ ngspice:
   executable: "ngspice_con"
   timeout_s: 120                      # hard-clipping blocks (TS-808 drive 0.9) take ~30 s
 
+audio:
+  # Demo sound (Phase 6, pedal_agent/audio.py): every mono WAV in audio/ is a clip.
+  clips_dir: "audio"
+  clip_s: 8                           # seconds used from each clip (8 s clip: TS-808 6.6 s, 3-block chain 9.8 s render)
+  input_peak_v: 0.3                   # clip peak as EMF at the pickup (same as the test sine; hard picking ~1 V)
+  out_dbfs: -1.0                      # dry and processed WAVs are normalized to this peak for listening
+  oversample: 1                       # 1 = simulate at the clip's rate (hard fuzz can alias); 2 = twice the rate,
+                                      # then low-pass filtered back (about 1.5x render time, measured)
+  timeout_s: 600
+  codemodel: null                     # path to ngspice's analog.cm; null = <ngspice bin>/../lib/ngspice/analog.cm
+
 paths:
   runs_dir: "runs"                   # RunRecords runs/<run_id>.json + checkpoints.sqlite
   sims_dir: "runs/sims"              # ngspice scratch: runs/sims/<sim_id>/

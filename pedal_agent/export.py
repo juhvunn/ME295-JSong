@@ -6,7 +6,8 @@ SHA-256 recorded in that step's CheckReport, otherwise the export is refused (bl
 bom.csv lists the parts of the simulated signal path, read from the rendered block subcircuits.
 The schematics (pedal_agent/schematics) are drawn from the same parameters; each is exported only if its
 connections match its netlist and its rendered subcircuit appears verbatim in netlist.cir.
-An existing export is never overwritten.
+summary.md states the demo-sound input assumption and the output level of each current render (pedal_agent/audio.py;
+the WAVs themselves are not exported). An existing export is never overwritten.
 
     python -m pedal_agent.export <run_id> [--runs-dir DIR]
 """
@@ -18,7 +19,7 @@ import re
 from pathlib import Path
 
 from pedal_agent.build import load_block, parse_value, render, taper
-from pedal_agent import schematics
+from pedal_agent import audio, schematics
 from pedal_agent.checker import build_netlist
 from pedal_agent.graph import RunStore
 from pedal_agent.harness import LOAD, PICKUP, VCC
@@ -135,7 +136,8 @@ def schematic_files(chain: list[BlockInstance], net: str) -> tuple[dict[str, byt
     return files, notes
 
 
-def summary_md(run: RunRecord, sha: str, project_name: str | None, schematic_names=(), schematic_notes=()) -> str:
+def summary_md(run: RunRecord, sha: str, project_name: str | None, schematic_names=(), schematic_notes=(),
+               audio_renders=()) -> str:
     step = run.best
     rep = step.report
     measured = {r.name: r for r in rep.results}
@@ -169,7 +171,9 @@ def summary_md(run: RunRecord, sha: str, project_name: str | None, schematic_nam
           + ("all within range." if rep.dc_ok else "; ".join(rep.errors)),
           f"Test signal: {run.spec.test_signal['f0_hz']:g} Hz sine, {run.spec.test_signal['amp_v']:g} V EMF "
           "into the pickup model.", "",
-          "## Model files", ""]
+          "## Demo sound", "", audio.assumption_text(), audio.aliasing_text(), ""]
+    L += [f"- `{m['clip']}` ({m['seconds']:g} s, {m['fs']} Hz): {audio.level_text(m)}." for m in audio_renders]         or ["- No demo sound rendered for this design."]
+    L += ["", "## Model files", ""]
     L += [f"- `{f.path}` ({f.status}), SHA-256 `{f.sha256[:16]}…`" for f in rep.model_files]
     L += ["", "## Files", "",
           "- `netlist.cir`: the exact ngspice netlist simulated (pickup model, blocks, 1 MΩ load, analyses).",
@@ -208,12 +212,13 @@ def export_run(run_id: str, store: RunStore | None = None, project_name: str | N
     w.writeheader()
     w.writerows(rows)
     drawings, notes = schematic_files(step.candidate.chain, net)
+    renders = [m for c in audio.clips() if (m := audio.rendered(store.dir, run, c)) and "error" not in m]
     out.mkdir(parents=True)
     (out / "netlist.cir").write_bytes(net.encode())                      # byte-identical to the simulated text
     (out / "bom.csv").write_text(buf.getvalue(), encoding="utf-8-sig", newline="")   # BOM so Excel reads Ω
     for name, data in drawings.items():
         (out / name).write_bytes(data)
-    (out / "summary.md").write_text(summary_md(run, sha, project_name, list(drawings), notes),
+    (out / "summary.md").write_text(summary_md(run, sha, project_name, list(drawings), notes, renders),
                                     encoding="utf-8", newline="\n")
     return out
 

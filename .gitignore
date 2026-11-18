@@ -9,3 +9,5 @@ __pycache__/
 .venv/
 projects/
 exports/
+# synthetic test clip, generated on first use by pedal_agent/audio.py (python -m pedal_agent.audio synth)
+audio/synthetic_plucks.wav

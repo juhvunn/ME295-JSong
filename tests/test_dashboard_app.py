@@ -151,3 +151,52 @@ def test_waveform_scale_toggle_defaults_to_normalized():
     toggle.set_value("Volts").run()
     assert not at.exception, at.exception
     assert wave_y_title() in ("mV", "V")
+
+
+# ---------- demo sound (Phase 6) ----------
+def accepted_with_clip(monkeypatch, tmp_path):
+    import numpy as np
+    from scipy.io import wavfile
+    from pedal_agent import audio
+    clips = tmp_path / "audio"
+    clips.mkdir()
+    monkeypatch.setenv("PEDAL_CLIPS_DIR", str(clips))
+    wavfile.write(clips / "di_riff.wav", 48000, (np.sin(np.arange(48000) / 20) * 9000).astype(np.int16))
+    at, store, _, calls = live_app(monkeypatch, tmp_path)
+    monkeypatch.setattr(actions, "render_audio", lambda *a, **k: calls.append(("render_audio", a, k)))
+    run = data.load_run(next(REPO_ROOT.glob("runs/example-jazz-christmas*.json")))
+    run.run_id, run.status = "20261118-jazz-accepted", "accepted"
+    store.save(run)
+    return at, store, run, calls, audio, clips / "di_riff.wav"
+
+
+def test_demo_sound_offers_render_then_plays_with_level_and_assumption(monkeypatch, tmp_path):
+    at, store, run, calls, audio, clip = accepted_with_clip(monkeypatch, tmp_path)
+    at.run()
+    assert not at.exception, at.exception
+    assert at.selectbox(key="clip").options == ["di riff", "synthetic plucks"]
+    next(b for b in at.button if b.label == "Render demo sound").click().run()
+    assert calls[-1][0] == "render_audio" and calls[-1][1] == (run.run_id, "di_riff.wav")
+    out = audio.folder(store.dir, run.run_id, clip)                       # what the worker would have written
+    out.mkdir(parents=True)
+    for f in ("dry.wav", "processed.wav"):
+        (out / f).write_bytes(clip.read_bytes())
+    meta = audio._key(run, clip) | {"input_peak_v": 0.3, "out_dbfs": -1.0, "oversample": 1, "fs": 48000, "seconds": 1.0,
+                                    "output_peak_v": 0.217}
+    (out / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    assert not at.exception, at.exception
+    assert len(at.get("audio")) == 1 and not [b for b in at.button if b.label == "Render demo sound"]
+    captions = " ".join(c.value for c in at.caption)
+    assert "output peak 0.217 V (-13.3 dBV)" in captions and "0.3 V peak EMF at the pickup" in captions
+    assert "about 1 V" in captions
+
+
+def test_demo_sound_waits_for_acceptance(monkeypatch, tmp_path):
+    at, store, run, calls, audio, clip = accepted_with_clip(monkeypatch, tmp_path)
+    run.status = "awaiting_feedback"
+    store.save(run)
+    at.run()
+    assert not at.exception, at.exception
+    assert "The demo sound is rendered when the design is accepted." in [c.value for c in at.caption]
+    assert not at.get("audio") and not [b for b in at.button if "demo sound" in b.label]

@@ -8,10 +8,12 @@ def chain_nodes(n):
     """Signal nodes for an n-block chain: in -> n1 -> ... -> out."""
     return ["in"] + [f"n{i}" for i in range(1, n)] + ["out"]
 
-def netlist(blocks, models_text, amp, f0, control):
+def netlist(blocks, models_text, amp, f0, control, source=None):
     """blocks: [(subckt_text, subckt_name), ...] in signal order; instance i is X<i+1>.
-    models_text is pasted in (no .include: the simulate() filter rejects it)."""
+    models_text is pasted in (no .include: the simulate() filter rejects it).
+    source: replaces the sine source driving node emf (audio renders: the clip source); default = the test sine."""
     p = PICKUP
+    source = source or f"Vsrc emf 0 dc 0 ac 1 sin(0 {amp} {f0})"
     nodes = chain_nodes(len(blocks))
     subckts = "\n".join(text for text, _ in blocks)
     instances = "\n".join(f"X{i + 1} {nodes[i]} {nodes[i + 1]} vcc 0 {name}"
@@ -20,7 +22,7 @@ def netlist(blocks, models_text, amp, f0, control):
 {models_text}
 {subckts}
 Vcc vcc 0 {VCC}
-Vsrc emf 0 dc 0 ac 1 sin(0 {amp} {f0})
+{source}
 Rpu emf pu1 {p['R']}
 Lpu pu1 in {p['L']}
 Ccab in 0 {p['C_cable']}

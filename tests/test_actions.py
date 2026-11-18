@@ -61,8 +61,9 @@ def test_actions_check_the_run_status(tmp_path):
 
 
 @pytest.mark.slow
-def test_live_flow_create_approve_feedback_accept(tmp_path):
-    store = RunStore(tmp_path / "runs")
+def test_live_flow_create_approve_feedback_accept(tmp_path, monkeypatch):
+    monkeypatch.setenv("PEDAL_CLIPS_DIR", str(tmp_path / "audio"))   # demo sound: only the synthetic clip (workers
+    store = RunStore(tmp_path / "runs")                               # inherit it), whatever recordings are in audio/
     run_id = actions.create_project("Jazz Christmas", "jazz", "warm, clean jazz tone", "Joe Pass", llm="fake",
                                     store=store)
     project = json.loads((tmp_path / "projects" / "jazz-christmas.json").read_text(encoding="utf-8"))
@@ -75,12 +76,17 @@ def test_live_flow_create_approve_feedback_accept(tmp_path):
     actions.send_feedback(run_id, "a bit more gain", llm="fake", store=store)
     run = wait_for(store, run_id, {"awaiting_feedback", "stopped"})
     assert any(s.action == "human_feedback" for s in run.steps)
-    actions.accept(run_id, store=store)
-    run = store.load(run_id)
-    assert run.status == "accepted" and run.steps[-1].action == "human_accept" and actions.active(store) is None
+    actions.accept(run_id, store=store)                 # then the demo sound renders in a worker under the lock
+    run = wait_for(store, run_id, {"accepted"})
+    assert run.steps[-1].action == "human_accept"
+    from pedal_agent import audio
+    renders = [audio.rendered(store.dir, run, c) for c in audio.clips()]
+    assert [c.name for c in audio.clips()] == [audio.SYNTH_NAME] and "error" not in renders[0], renders
     out = actions.export_design(run_id, store=store)
     drawings = {f"schematic_{i}_{b.block_id}.{x}" for i, b in enumerate(run.best.candidate.chain, start=1)
                 for x in ("svg", "png")}
     assert out == actions.export_folder(run_id, store) and {f.name for f in out.iterdir()} == \
         {"netlist.cir", "bom.csv", "summary.md"} | drawings
-    assert (out / "summary.md").read_text(encoding="utf-8").startswith("# Exported design: Jazz Christmas")
+    summary = (out / "summary.md").read_text(encoding="utf-8")
+    assert summary.startswith("# Exported design: Jazz Christmas") and "0.3 V peak EMF at the pickup" in summary
+    assert f"`{audio.SYNTH_NAME}`" in summary and audio.aliasing_text() in summary

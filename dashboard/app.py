@@ -22,7 +22,7 @@ import streamlit as st  # noqa: E402
 
 from dashboard import data  # noqa: E402
 from dashboard.charts import response_chart, waveform_chart  # noqa: E402
-from pedal_agent import actions, schematics  # noqa: E402
+from pedal_agent import actions, audio, schematics  # noqa: E402
 from pedal_agent.config import REPO_ROOT, load_config  # noqa: E402
 
 BLUE, ORANGE, ORANGE_LIGHT = "#2a78d6", "#eb6834", "#fde9df"
@@ -31,6 +31,7 @@ LLM = os.environ.get("PEDAL_DASHBOARD_LLM", "real")
 RUNS_DIR = os.environ.get("PEDAL_RUNS_DIR")             # default: runs/ from config.yaml
 REFRESH_S = 2
 SCROLL_HEIGHT = 400                       # px; design choices and component lists scroll inside boxes this tall
+TOGGLE_H = 32                             # px; height of the waveform scale toggle (spacer above the other chart)
 STATUS_ICON = {"Pass": "✓", "Too high": "▲", "Too low": "▼", "Not measured": "–"}
 CATEGORY_TITLE = {"overdrive": "Overdrive", "distortion": "Distortion", "fuzz": "Fuzz"}
 
@@ -102,6 +103,33 @@ def show_schematic(pos: int, block_id: str, params: dict, n: int) -> None:
         b64 = base64.b64encode(img["png"]).decode()
         st.markdown(f"<div style='overflow-x:auto'><img src='data:image/png;base64,{b64}' style='max-width:none'></div>",
                     unsafe_allow_html=True)
+
+
+def show_demo_sound(run, step, live: bool, working: bool) -> None:
+    """Clip selector and Dry/Processed player for the accepted design (pedal_agent/audio.py, cached renders)."""
+    files = {c.name: c for c in audio.clips()}
+    if not files:
+        st.caption(f"No clips yet: put a mono WAV (44.1 or 48 kHz) in {audio.clips_dir()}.")
+        return
+    clip = files[st.selectbox("Clip", list(files), format_func=lambda n: Path(n).stem.replace("_", " "), key="clip")]
+    meta = audio.rendered(STORE.dir, run, clip) if run.status == "accepted" else None
+    if run.status != "accepted":
+        st.caption("The demo sound is rendered when the design is accepted.")
+    elif working and BUSY.get("task") == "audio":
+        st.caption("Rendering demo sound…")
+    elif meta is None or "error" in meta:
+        if meta:
+            st.error(f"Render failed: {meta['error']}")
+        if st.button("Render demo sound" if meta is None else "Render again", disabled=bool(BUSY) or not live,
+                     width="stretch"):
+            do(actions.render_audio, run.run_id, clip.name, store=STORE)
+            st.rerun()
+    else:
+        sig = st.segmented_control("Signal", ["Dry", "Processed"], default="Processed", key="signal") or "Processed"
+        st.audio((audio.folder(STORE.dir, run.run_id, clip) / f"{sig.lower()}.wav").read_bytes(), format="audio/wav")
+        st.caption(f"Real level: {audio.level_text(meta)}."
+                   + (f" Sound of step {meta['step']} (the accepted design)." if meta["step"] != step.n else ""))
+    st.caption(audio.assumption_text())
 
 
 def card(title: str, body: str = "") -> None:
@@ -210,7 +238,10 @@ working = bool(BUSY) and BUSY.get("run_id") == run.run_id
 
 # ---------- CENTER ----------
 with center:
-    if working:
+    if working and BUSY.get("task") == "audio":
+        st.info(f"Rendering the demo sound (about {audio.cfg()['clip_s']} s of audio per clip; "
+                f"this page refreshes every {REFRESH_S} s)")
+    elif working:
         last = run.steps[-1].title if run.steps else "Tone Analyst drafting the target spec"
         st.info(f"Agent working… latest step: {last} · {run.sims_used}/{run.sim_budget} simulations "
                 f"(this page refreshes every {REFRESH_S} s)")
@@ -282,9 +313,7 @@ with center:
     d1, d2 = st.columns(2)                                   # equal height: both cards stretch to the row
     with d1.container(border=True, height="stretch"):
         st.markdown("**Demo sound**")
-        st.selectbox("Clip", ["DI clip (Phase 6)"], disabled=True)
-        st.segmented_control("Signal", ["Dry", "Processed"], disabled=True)
-        st.button("▶ Play", disabled=True, help="Audio rendering comes in Phase 6.")
+        show_demo_sound(run, step, live, working)
     with d2.container(border=True, height="stretch"):
         st.markdown("**Feedback**")
         can = live and run.status == "awaiting_feedback" and not BUSY
@@ -315,14 +344,14 @@ with center:
 
     # 5. test result
     with st.container(border=True):
-        h1, h2 = st.columns([3, 2], vertical_alignment="center")
-        h1.markdown(f"**Test result** · step {step.n}")
-        scale = h2.segmented_control("Waveform scale", ["Normalized", "Volts"], default="Normalized",
-                                     key="wave_scale", label_visibility="collapsed")
+        st.markdown(f"**Test result** · step {step.n}")
         p = step.report.plots
         g1, g2 = st.columns(2)
         if p:
+            scale = g1.segmented_control("Waveform scale", ["Normalized", "Volts"], default="Normalized",
+                                         key="wave_scale", label_visibility="collapsed")
             g1.altair_chart(waveform_chart(p, normalized=scale != "Volts"), width="stretch")
+            g2.container(height=TOGGLE_H, border=False)        # spacer: same height as the toggle, charts aligned
             g2.altair_chart(response_chart(p), width="stretch")
         else:
             st.caption("No plot data stored for this step.")

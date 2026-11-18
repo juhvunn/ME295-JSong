@@ -43,20 +43,20 @@ def waveform_chart(p, normalized: bool = True) -> alt.Chart:
     """Input (dashed blue) and output (orange) over the last two periods.
 
     normalized: each trace divided by its own peak (clipping shape visible at any level); otherwise in mV when both
-    stay below 1 V, else V. The legend names each trace's actual peak; the tooltip always shows actual values.
+    stay below 1 V, else V. The subtitle names each trace's actual peak; the tooltip always shows actual values.
     """
     big = max(map(abs, p.v_in + p.v_out)) >= 1.0
     k, unit = (1.0, "V") if big else (1e3, "mV")
     fmt = ".1f" if unit == "mV" else ".3f"
     pk_in, pk_out = max(map(abs, p.v_in)) or 1.0, max(map(abs, p.v_out)) or 1.0
-    names = [f"Input (peak {_peak_text(pk_in)})", f"Output (peak {_peak_text(pk_out)})"]
+    names = ["Input", "Output"]
     t = [x * 1e3 for x in p.t_s]
     wide = pd.DataFrame({"t": t, "Input": [v * k for v in p.v_in], "Output": [v * k for v in p.v_out]})
     if normalized:
         plotted = pd.DataFrame({"t": t, names[0]: [v / pk_in for v in p.v_in], names[1]: [v / pk_out for v in p.v_out]})
         y_title, lo, hi = "normalized (peak = 1)", -1.0, 1.0
     else:
-        plotted = wide.rename(columns={"Input": names[0], "Output": names[1]})
+        plotted = wide
         y_title, lo, hi = unit, min(wide[["Input", "Output"]].min()), max(wide[["Input", "Output"]].max())
     long = plotted.melt("t", var_name="signal", value_name="v")
     sig = alt.Scale(domain=names, range=[BLUE, ORANGE])
@@ -76,8 +76,13 @@ def waveform_chart(p, normalized: bool = True) -> alt.Chart:
     ).add_params(hover)
     dots = lines.mark_point(filled=True, size=40).encode(
         opacity=alt.condition(hover, alt.value(1), alt.value(0))).transform_filter(hover)
-    sub = "last 2 periods, each trace scaled to its own peak" if normalized else "last 2 periods"
+    sub = ["last 2 periods, each trace scaled to its own peak" if normalized else "last 2 periods",
+           peaks_text(pk_in, pk_out)]
     return _style(alt.layer(lines, rule, dots).properties(title=alt.TitleParams("Waveform", subtitle=sub)))
+
+
+def peaks_text(pk_in: float, pk_out: float) -> str:
+    return f"peaks: input {_peak_text(pk_in)}, output {_peak_text(pk_out)}"
 
 
 def response_chart(p) -> alt.Chart:
@@ -98,4 +103,6 @@ def response_chart(p) -> alt.Chart:
                  alt.Tooltip("dB:Q", title="gain (dB)", format=".2f")]).add_params(hover)
     rule = alt.Chart(fr).mark_rule(color="#8a8982").encode(
         x="Hz:Q", opacity=alt.condition(hover, alt.value(0.6), alt.value(0))).transform_filter(hover)
-    return _style(alt.layer(line, pts, rule).properties(title=alt.TitleParams("Frequency response", subtitle="pickup EMF to output")))
+    top = fr.loc[fr.dB.idxmax()]
+    sub = ["pickup EMF to output", f"peak {top.dB:.1f} dB at {top.Hz:,.0f} Hz"]   # two lines, like the waveform
+    return _style(alt.layer(line, pts, rule).properties(title=alt.TitleParams("Frequency response", subtitle=sub)))

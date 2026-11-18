@@ -34,7 +34,7 @@ def test_response_is_log_20Hz_to_20kHz():
     assert x["scale"]["type"] == "log" and x["scale"]["domain"] == [20, 20000]
 
 
-def test_waveform_normalized_by_default_with_actual_peaks_in_legend():
+def test_waveform_normalized_by_default_with_actual_peaks_in_subtitle():
     spec = charts.waveform_chart(PLOTS).to_dict()
     line = layers(spec)["line"]
     y, names = line["encoding"]["y"], line["encoding"]["color"]["scale"]["domain"]
@@ -43,6 +43,13 @@ def test_waveform_normalized_by_default_with_actual_peaks_in_legend():
     for name in names:
         assert max(abs(r["v"]) for r in rows if r["signal"] == name) == 1.0                # each trace peaks at 1
     pk_in, pk_out = max(map(abs, PLOTS.v_in)), max(map(abs, PLOTS.v_out))
-    assert names == [f"Input (peak {charts._peak_text(pk_in)})", f"Output (peak {charts._peak_text(pk_out)})"]
+    assert names == ["Input", "Output"] and charts.peaks_text(pk_in, pk_out) in spec["title"]["subtitle"]
+    assert charts.peaks_text(pk_in, pk_out).endswith(charts._peak_text(pk_out))
     tips = [t["title"] for l in spec["layer"] for t in l["encoding"].get("tooltip", [])]
     assert "input (mV)" in tips and "output (mV)" in tips                                  # hover: actual values
+
+
+def test_both_subtitles_have_two_lines_so_the_plots_line_up():
+    for chart in (charts.waveform_chart(PLOTS), charts.waveform_chart(PLOTS, normalized=False),
+                  charts.response_chart(PLOTS)):
+        assert len(chart.to_dict()["title"]["subtitle"]) == 2
