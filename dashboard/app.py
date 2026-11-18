@@ -17,11 +17,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import altair as alt  # noqa: E402  (bundled with Streamlit)
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from dashboard import data  # noqa: E402
+from dashboard.charts import response_chart, waveform_chart  # noqa: E402
 from pedal_agent import actions, schematics  # noqa: E402
 from pedal_agent.config import REPO_ROOT, load_config  # noqa: E402
 
@@ -30,6 +30,7 @@ GENRES = ("Rock", "Pop", "R&B", "Jazz", "Blues", "Metal")
 LLM = os.environ.get("PEDAL_DASHBOARD_LLM", "real")
 RUNS_DIR = os.environ.get("PEDAL_RUNS_DIR")             # default: runs/ from config.yaml
 REFRESH_S = 2
+SCROLL_HEIGHT = 400                       # px; design choices and component lists scroll inside boxes this tall
 STATUS_ICON = {"Pass": "✓", "Too high": "▲", "Too low": "▼", "Not measured": "–"}
 CATEGORY_TITLE = {"overdrive": "Overdrive", "distortion": "Distortion", "fuzz": "Fuzz"}
 
@@ -262,77 +263,29 @@ with center:
         f"<span class='arrow'>→</span><div class='node block'><b>{esc(c['name'])}</b><br>"
         + "".join(f"<span class='knob{' changed' if s['changed'] else ''}'>{esc(s['name'])} <b>{esc(s['value'])}</b></span>"
                   for s in c["settings"]) + "</div>" for c in data.chain_cards(step))
+    # 1. project header, 2. signal chain
     card("Selected project",
          f"<div style='font-size:1.4rem; font-weight:600'>{esc(h['name'])}</div>"
-         f"<div class='muted' style='margin:4px 0 10px'>{esc(h['goal'])}</div>{badges}"
-         f"<h4 style='margin-top:14px'>Signal chain</h4>"
+         f"<div class='muted' style='margin:4px 0 10px'>{esc(h['goal'])}</div>{badges}")
+    card(f"Signal chain · step {step.n}",
          f"<div class='chain'><div class='node'>{esc(data.pickup_text())}</div>{chain}"
          f"<span class='arrow'>→</span><div class='node'>{esc(data.amp_text())}</div></div>"
          f"<div class='muted' style='margin-top:6px'>Highlighted knob values were set by the agent; others are block defaults.</div>")
 
+    # 3. block schematics, one per block
     for i, b in enumerate(step.candidate.chain, start=1):
         with st.container(border=True):
             st.markdown(f"**Block schematic** · {i}/{len(step.candidate.chain)} · `{b.block_id}` · step {step.n}")
             show_schematic(i, b.block_id, b.params, step.n)
-            st.markdown("**Component list**")
-            comps = pd.DataFrame(data.components(b.block_id, b.params))
-            styled = comps[["designator", "kind", "value", "parameter", "note"]].style.apply(
-                lambda r: [f"background-color: {ORANGE_LIGHT}" if comps.loc[r.name, "adjustable"] else ""] * len(r), axis=1)
-            st.dataframe(styled, hide_index=True, width="stretch", height=35 * (len(comps) + 1) + 3)   # all rows
-            st.caption("Highlighted rows are parameters the agent can change.")
 
-    with st.container(border=True):
-        st.markdown("**Design choices**")
-        html = ""
-        for c in data.design_choices(run):
-            res = f" · {c['n_pass']}/{h['n_targets']} targets" if c["simulated"] else ""
-            errs = f"<div class='muted'>Rejected: {esc('; '.join(c['errors']))}</div>" if c["errors"] else ""
-            tags = [c["action"]] + ([c["tag"]] if c["tag"] != c["action"] else [])
-            html += (f"<div class='step'><b>{c['n']}. {esc(c['title'])}</b>"
-                     + "".join(f"<span class='tag'>{esc(t)}</span>" for t in tags) + f"<span class='muted'>{res}</span>"
-                     f"<div class='muted'>{esc(c['why'])}</div>{errs}</div>")
-        st.markdown(html, unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown(f"**Test result** · step {step.n}")
-        p = step.report.plots
-        g1, g2 = st.columns(2)
-        if p:
-            wave = pd.DataFrame({"t (ms)": [t * 1e3 for t in p.t_s] * 2, "V": p.v_in + p.v_out,
-                                 "signal": ["Input"] * len(p.t_s) + ["Output"] * len(p.t_s)})
-            g1.altair_chart(alt.Chart(wave, title="Waveform (last 2 periods)").mark_line(strokeWidth=2).encode(
-                x="t (ms):Q", y=alt.Y("V:Q", title="V", axis=alt.Axis(tickCount=5)),
-                color=alt.Color("signal:N", scale=alt.Scale(domain=["Input", "Output"], range=[BLUE, ORANGE]),
-                                legend=alt.Legend(orient="bottom", title=None)),
-                strokeDash=alt.StrokeDash("signal:N", scale=alt.Scale(domain=["Input", "Output"], range=[[5, 4], [1, 0]]),
-                                          legend=None),
-                tooltip=["signal", alt.Tooltip("t (ms):Q", format=".3f"), alt.Tooltip("V:Q", format=".3f")]
-            ).properties(height=220), width="stretch")
-            fr = pd.DataFrame({"Hz": p.freq_hz, "dB": p.mag_db})
-            g2.altair_chart(alt.Chart(fr, title="Frequency response").mark_line(strokeWidth=2, color=ORANGE).encode(
-                x=alt.X("Hz:Q", scale=alt.Scale(type="log", domain=[20, 20000], nice=False),
-                        axis=alt.Axis(values=[20, 100, 1000, 10000, 20000], format="~s")),
-                y=alt.Y("dB:Q", axis=alt.Axis(tickCount=5)),
-                tooltip=[alt.Tooltip("Hz:Q", format=".0f"), alt.Tooltip("dB:Q", format=".1f")]
-            ).properties(height=220), width="stretch")
-        else:
-            st.caption("No plot data stored for this step.")
-        if step.report.errors:
-            st.warning("Checker: " + "; ".join(step.report.errors))
-        trs = "".join(
-            f"<tr><td>{esc(r['target'])}</td><td>{esc(r['range'])}</td><td>{esc(r['measured'])}</td>"
-            f"<td><span class='status {'pass' if r['status'] == 'Pass' else 'fail'}'>{STATUS_ICON[r['status']]} "
-            f"{esc(r['status'])}</span></td></tr>" for r in data.target_rows(run, step))
-        st.markdown("<table style='width:100%; font-size:0.88rem'><tr><th align='left'>Target</th><th align='left'>Range</th>"
-                    f"<th align='left'>Measured</th><th align='left'>Status</th></tr>{trs}</table>", unsafe_allow_html=True)
-
-    d1, d2 = st.columns(2)
-    with d1.container(border=True):
+    # 4. demo sound and feedback (accept, export)
+    d1, d2 = st.columns(2)                                   # equal height: both cards stretch to the row
+    with d1.container(border=True, height="stretch"):
         st.markdown("**Demo sound**")
         st.selectbox("Clip", ["DI clip (Phase 6)"], disabled=True)
         st.segmented_control("Signal", ["Dry", "Processed"], disabled=True)
         st.button("▶ Play", disabled=True, help="Audio rendering comes in Phase 6.")
-    with d2.container(border=True):
+    with d2.container(border=True, height="stretch"):
         st.markdown("**Feedback**")
         can = live and run.status == "awaiting_feedback" and not BUSY
         text = st.text_area("Tell the Planner what to change", disabled=not can, height=80, key=f"fb-{run.run_id}")
@@ -359,6 +312,49 @@ with center:
                     st.rerun()
         elif BUSY and not working:
             st.caption(f"Another run is active ({BUSY['run_id']}).")
+
+    # 5. test result
+    with st.container(border=True):
+        st.markdown(f"**Test result** · step {step.n}")
+        p = step.report.plots
+        g1, g2 = st.columns(2)
+        if p:
+            g1.altair_chart(waveform_chart(p), width="stretch")
+            g2.altair_chart(response_chart(p), width="stretch")
+        else:
+            st.caption("No plot data stored for this step.")
+        if step.report.errors:
+            st.warning("Checker: " + "; ".join(step.report.errors))
+        trs = "".join(
+            f"<tr><td>{esc(r['target'])}</td><td>{esc(r['range'])}</td><td>{esc(r['measured'])}</td>"
+            f"<td><span class='status {'pass' if r['status'] == 'Pass' else 'fail'}'>{STATUS_ICON[r['status']]} "
+            f"{esc(r['status'])}</span></td></tr>" for r in data.target_rows(run, step))
+        st.markdown("<table style='width:100%; font-size:0.88rem'><tr><th align='left'>Target</th><th align='left'>Range</th>"
+                    f"<th align='left'>Measured</th><th align='left'>Status</th></tr>{trs}</table>", unsafe_allow_html=True)
+
+    # 6. design choices: fixed-height box, opens scrolled to the newest step (earlier steps above)
+    st.markdown("**Design choices**")
+    with st.container(height=SCROLL_HEIGHT, border=True, autoscroll=True):
+        html = ""
+        for c in data.design_choices(run):
+            res = f" · {c['n_pass']}/{h['n_targets']} targets" if c["simulated"] else ""
+            errs = f"<div class='muted'>Rejected: {esc('; '.join(c['errors']))}</div>" if c["errors"] else ""
+            tags = [c["action"]] + ([c["tag"]] if c["tag"] != c["action"] else [])
+            html += (f"<div class='step'><b>{c['n']}. {esc(c['title'])}</b>"
+                     + "".join(f"<span class='tag'>{esc(t)}</span>" for t in tags) + f"<span class='muted'>{res}</span>"
+                     f"<div class='muted'>{esc(c['why'])}</div>{errs}</div>")
+        st.markdown(html, unsafe_allow_html=True)
+
+    # 7. component lists, per block, in one fixed-height scrolling box
+    st.markdown(f"**Component list** · step {step.n}")
+    with st.container(height=SCROLL_HEIGHT, border=True):
+        for i, b in enumerate(step.candidate.chain, start=1):
+            st.markdown(f"{i}/{len(step.candidate.chain)} · `{b.block_id}`")
+            comps = pd.DataFrame(data.components(b.block_id, b.params))
+            styled = comps[["designator", "kind", "value", "parameter", "note"]].style.apply(
+                lambda r: [f"background-color: {ORANGE_LIGHT}" if comps.loc[r.name, "adjustable"] else ""] * len(r), axis=1)
+            st.dataframe(styled, hide_index=True, width="stretch", height=35 * (len(comps) + 1) + 3)   # all rows
+    st.caption("Highlighted rows are parameters the agent can change.")
 
 # ---------- RIGHT ----------
 with right:

@@ -118,3 +118,17 @@ def test_accepted_run_offers_export_then_downloads(monkeypatch, tmp_path):
     assert not at.exception, at.exception
     assert not [b for b in at.button if b.label.startswith("Export design")]
     assert any(f"exported to {folder}" in c.value for c in at.caption)
+
+
+def test_center_column_order():
+    """Header, chain, schematics, demo sound | feedback, test result, design choices, component list (DASHBOARD_SPEC 1)."""
+    at = AppTest.from_file(APP, default_timeout=60).run()
+    example = next(e for e in data.build_index() if "example-jazz-christmas" in e["path"])
+    at.radio[1].set_value(example["run_id"]).run()
+    assert not at.exception, at.exception
+    order = ["Selected project", "Signal chain", "Block schematic", "Demo sound", "Feedback", "Test result",
+             "Design choices", "Component list"]
+    texts = [m.value for m in at.markdown]
+    first = [next(i for i, t in enumerate(texts) if name in t) for name in order]
+    assert first == sorted(first), dict(zip(order, first))
+    assert "Highlighted rows are parameters the agent can change." in [c.value for c in at.caption]
