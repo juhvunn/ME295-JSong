@@ -3,7 +3,7 @@ runs/*
 !runs/example-*.json
 logs/*.log
 # generated plots and schematics (scripts/plot_results.py, scripts/draw_schematic.py)
-results/
+/results/
 *.raw
 __pycache__/
 .venv/
